@@ -1,0 +1,6 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+# TODO: add custom override targets once real sources are wired

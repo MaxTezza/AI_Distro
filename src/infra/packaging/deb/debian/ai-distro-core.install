@@ -1,0 +1,7 @@
+build/deb-root/usr/bin/ai-distro-core usr/bin/
+configs/core.json etc/ai-distro/core.json
+build/deb-root/lib/systemd/system/ai-distro-core.service lib/systemd/system/
+src/infra/packaging/deb/logrotate/ai-distro etc/logrotate.d/ai-distro
+configs/kdeglobals etc/xdg/kdeglobals
+assets/themes/ai-distro usr/share/plasma/look-and-feel/ai-distro
+assets/themes/ai-distro/contents/color-schemes/AI-Distro.colors usr/share/color-schemes/AI-Distro.colors

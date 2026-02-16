@@ -1,0 +1,10 @@
+build/deb-root/usr/bin/ai-distro-agent usr/bin/
+build/deb-root/usr/lib/ai-distro/intent_parser.py usr/lib/ai-distro/
+configs/agent.json etc/ai-distro/agent.json
+configs/persona.json etc/ai-distro/persona.json
+configs/persona.alfred.json etc/ai-distro/persona.alfred.json
+configs/policy.json etc/ai-distro/policy.json
+configs/intent-map.json etc/ai-distro/intent-map.json
+build/deb-root/lib/systemd/system/ai-distro-agent.service lib/systemd/system/
+build/deb-root/lib/systemd/system/ai-distro-agent.socket lib/systemd/system/
+src/infra/packaging/deb/logrotate/ai-distro etc/logrotate.d/ai-distro

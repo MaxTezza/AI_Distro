@@ -1,0 +1,6 @@
+build/deb-root/usr/bin/ai-distro-shell usr/bin/
+build/deb-root/usr/bin/ai-distro-shell-ui usr/bin/
+build/deb-root/usr/lib/ai-distro/ai_distro_shell.py usr/lib/ai-distro/
+build/deb-root/lib/systemd/system/ai-distro-shell.service lib/systemd/system/
+build/deb-root/usr/share/ai-distro/ui usr/share/ai-distro/
+build/deb-root/etc/xdg/autostart/ai-distro-shell.desktop etc/xdg/autostart/

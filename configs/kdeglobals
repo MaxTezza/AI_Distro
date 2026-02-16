@@ -1,0 +1,6 @@
+[General]
+LookAndFeelPackage=ai.distro
+ColorScheme=AI-Distro
+
+[Icons]
+Theme=breeze-dark

@@ -1,0 +1,82 @@
+{
+  "package_install": {
+    "examples": [
+      "install firefox",
+      "install vim",
+      "add docker"
+    ],
+    "payload": "package"
+  },
+  "system_update": {
+    "examples": [
+      "update the system",
+      "upgrade everything",
+      "check for updates"
+    ],
+    "payload": "channel"
+  },
+  "network_wifi_on": {
+    "examples": [
+      "turn on wifi",
+      "enable wireless"
+    ]
+  },
+  "network_wifi_off": {
+    "examples": [
+      "turn off wifi",
+      "disable wireless"
+    ]
+  },
+  "set_volume": {
+    "examples": [
+      "set volume to 40 percent",
+      "volume 20"
+    ],
+    "payload": "percent"
+  },
+  "set_brightness": {
+    "examples": [
+      "set brightness to 60 percent",
+      "brightness 30"
+    ],
+    "payload": "percent"
+  },
+  "power_reboot": {
+    "examples": [
+      "restart the computer",
+      "reboot now"
+    ]
+  },
+  "power_shutdown": {
+    "examples": [
+      "shutdown the system",
+      "power off"
+    ]
+  },
+  "open_url": {
+    "examples": [
+      "open gmail",
+      "go to docs.openai.com"
+    ],
+    "payload": "url"
+  },
+  "open_app": {
+    "examples": [
+      "open firefox",
+      "launch settings"
+    ],
+    "payload": "app"
+  },
+  "network_bluetooth_on": {
+    "examples": [
+      "turn on bluetooth",
+      "enable bluetooth"
+    ]
+  },
+  "network_bluetooth_off": {
+    "examples": [
+      "turn off bluetooth",
+      "disable bluetooth"
+    ]
+  }
+}

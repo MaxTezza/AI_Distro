@@ -1,0 +1,8 @@
+[package]
+name = "ai-distro-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ai-distro-common = { path = "../ai-distro-common" }
+log = "0.4"

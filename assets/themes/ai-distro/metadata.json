@@ -1,0 +1,13 @@
+{
+  "KPackageStructure": "Plasma/LookAndFeel",
+  "KPlugin": {
+    "Id": "ai.distro",
+    "Name": "AI Distro",
+    "Description": "Pop-like look and feel for KDE",
+    "Version": "0.1",
+    "License": "Apache-2.0",
+    "Authors": [
+      {"Name": "AI Distro Team"}
+    ]
+  }
+}

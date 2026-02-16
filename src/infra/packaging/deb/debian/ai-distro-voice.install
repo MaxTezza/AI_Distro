@@ -1,0 +1,4 @@
+build/deb-root/usr/bin/ai-distro-voice usr/bin/
+configs/voice.json etc/ai-distro/voice.json
+build/deb-root/lib/systemd/system/ai-distro-voice.service lib/systemd/system/
+src/infra/packaging/deb/logrotate/ai-distro etc/logrotate.d/ai-distro

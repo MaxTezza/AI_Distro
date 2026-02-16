@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = [
+  "ai-distro-common",
+  "ai-distro-core",
+  "ai-distro-voice",
+  "ai-distro-agent",
+]

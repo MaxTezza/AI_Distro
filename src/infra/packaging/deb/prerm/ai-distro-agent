@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+
+# Pre-remove hook for ai-distro-agent
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl stop ai-distro-agent.service || true
+  systemctl disable ai-distro-agent.service || true
+fi
+
+exit 0

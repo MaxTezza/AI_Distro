@@ -1,0 +1,24 @@
+#!/bin/sh
+set -e
+
+# Post-install hook for ai-distro-voice
+# Enable voice service on install
+if ! getent group ai-distro >/dev/null 2>&1; then
+  addgroup --system ai-distro || true
+fi
+if ! getent passwd ai-distro >/dev/null 2>&1; then
+  adduser --system --ingroup ai-distro --no-create-home --home /nonexistent --shell /usr/sbin/nologin ai-distro || true
+fi
+if [ ! -d /var/log/ai-distro-voice ]; then
+  mkdir -p /var/log/ai-distro-voice || true
+fi
+if [ ! -d /var/lib/ai-distro-voice ]; then
+  mkdir -p /var/lib/ai-distro-voice || true
+fi
+chown -R ai-distro:ai-distro /var/log/ai-distro-voice /var/lib/ai-distro-voice 2>/dev/null || true
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl daemon-reload || true
+  systemctl enable ai-distro-voice.service || true
+fi
+
+exit 0

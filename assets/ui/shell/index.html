@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AI Distro Shell</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-orbit"></div>
+    <div class="bg-grain"></div>
+
+    <main class="shell">
+      <header class="shell-header">
+        <div class="brand">
+          <div class="brand-mark">AI</div>
+          <div>
+            <div class="brand-title">AI Distro</div>
+            <div class="brand-sub">Assistant Shell</div>
+          </div>
+        </div>
+        <div class="status">
+          <span id="status-dot" class="status-dot"></span>
+          <span id="status-text">Connecting...</span>
+        </div>
+      </header>
+
+      <section class="shell-body">
+        <aside class="context">
+          <h2>Now</h2>
+          <div class="context-card">
+            <div class="context-title" id="context-greeting">Hello.</div>
+            <div class="context-sub" id="context-summary">Say something like “check my gmail” or “open settings”.</div>
+          </div>
+          <div class="context-card">
+            <div class="context-title">Modes</div>
+            <div class="toggle">
+              <span>Voice</span>
+              <button id="voice-toggle" class="toggle-button" data-state="off">Off</button>
+            </div>
+            <div class="toggle">
+              <span>Manual</span>
+              <span class="pill">Always available</span>
+            </div>
+            <div class="toggle">
+              <span>Persona</span>
+              <div class="toggle-group" role="group" aria-label="Persona">
+                <button class="toggle-button persona-button" data-persona="max">Max</button>
+                <button class="toggle-button persona-button" data-persona="alfred">Alfred</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <section class="conversation" id="conversation">
+          <div class="message assistant">
+            <div class="avatar">◉</div>
+            <div class="bubble">
+              <div class="name">Assistant</div>
+              <p>I'm ready. Ask me to do anything on your computer.</p>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <footer class="shell-input">
+        <div class="input-wrap">
+          <input id="command-input" type="text" placeholder="Tell me what to do…" autocomplete="off" />
+          <button id="send-button" class="primary">Send</button>
+          <button id="confirm-button" class="ghost hidden">Confirm</button>
+          <button id="mic-button" class="ghost">Hold to talk</button>
+        </div>
+        <div class="helper-text" id="helper-text">Tip: “open gmail”, “set volume to 40%”, “turn on wifi”.</div>
+      </footer>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

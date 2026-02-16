@@ -1,0 +1,12 @@
+{
+  "service": {
+    "name": "ai-distro-voice",
+    "log_level": "info",
+    "log_file": "/var/log/ai-distro-voice/voice.log"
+  },
+  "asr_model": "vosk",
+  "tts_model": "piper",
+  "audio_device": "default",
+  "asr_binary": "/usr/bin/vosk-server",
+  "tts_binary": "/usr/bin/piper"
+}

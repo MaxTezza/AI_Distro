@@ -1,0 +1,12 @@
+# Branding for Calamares (scaffold)
+componentName: ai-distro
+strings:
+  productName: "AI Distro"
+  shortProductName: "AI Distro"
+  version: "0.1"
+  shortVersion: "0.1"
+  windowTitle: "Install AI Distro"
+images:
+  logo: "logo.png"
+  product: "product.png"
+  background: "background.png"

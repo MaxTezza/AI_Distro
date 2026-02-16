@@ -1,0 +1,28 @@
+[Unit]
+Description=AI Distro Shell Server
+After=network-online.target ai-distro-agent.service
+Wants=network-online.target ai-distro-agent.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ai-distro-shell
+Restart=on-failure
+RestartSec=2
+Environment=AI_DISTRO_SHELL_STATIC_DIR=/usr/share/ai-distro/ui/shell
+User=ai-distro
+Group=ai-distro
+ReadWritePaths=/etc/ai-distro
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

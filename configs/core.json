@@ -1,0 +1,10 @@
+{
+  "service": {
+    "name": "ai-distro-core",
+    "log_level": "info",
+    "log_file": "/var/log/ai-distro-core/core.log"
+  },
+  "state_db_path": "/var/lib/ai-distro-core/state.db",
+  "ipc_socket": "/run/ai-distro/core.sock",
+  "context_dir": "/var/lib/ai-distro-core/context"
+}

@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+
+# Enable shell server on install
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl daemon-reload || true
+  systemctl enable ai-distro-shell.service || true
+fi
+
+# Allow shell to persist persona selection system-wide
+if [ ! -d /etc/ai-distro ]; then
+  mkdir -p /etc/ai-distro || true
+fi
+if [ -f /etc/ai-distro/persona.json ]; then
+  chown ai-distro:ai-distro /etc/ai-distro/persona.json 2>/dev/null || true
+  chmod 664 /etc/ai-distro/persona.json 2>/dev/null || true
+else
+  # If the persona file isn't present yet, make the directory writable.
+  chown root:ai-distro /etc/ai-distro 2>/dev/null || true
+  chmod 2775 /etc/ai-distro 2>/dev/null || true
+fi
+
+exit 0

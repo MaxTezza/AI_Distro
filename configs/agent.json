@@ -1,0 +1,10 @@
+{
+  "service": {
+    "name": "ai-distro-agent",
+    "log_level": "info",
+    "log_file": "/var/log/ai-distro-agent/agent.log"
+  },
+  "skills_dir": "/var/lib/ai-distro-agent/skills",
+  "policy_file": "/etc/ai-distro/policy.json",
+  "memory_dir": "/var/lib/ai-distro-agent/memory"
+}

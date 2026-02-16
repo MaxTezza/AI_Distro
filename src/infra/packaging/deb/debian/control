@@ -1,0 +1,31 @@
+Source: ai-distro
+Section: misc
+Priority: optional
+Maintainer: AI Distro Team <team@example.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+
+Package: ai-distro-core
+Architecture: amd64
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: AI Distro core services
+ Core runtime, voice pipeline, and learning services.
+
+Package: ai-distro-voice
+Architecture: amd64
+Depends: ${misc:Depends}, ${shlibs:Depends}, ai-distro-core
+Description: AI Distro voice stack
+ ASR/TTS services and audio integration.
+
+Package: ai-distro-agent
+Architecture: amd64
+Depends: ${misc:Depends}, ${shlibs:Depends}, ai-distro-core
+Description: AI Distro agent runtime
+ Agent orchestration and skills.
+
+Package: ai-distro-shell
+Architecture: amd64
+Depends: ${misc:Depends}, ai-distro-agent, python3, chromium-browser | chromium | firefox
+Description: AI Distro assistant shell
+ Full-screen assistant UI and shell server for voice-first control.

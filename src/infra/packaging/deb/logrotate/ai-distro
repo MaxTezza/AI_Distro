@@ -1,0 +1,12 @@
+/var/log/ai-distro-core/*.log
+/var/log/ai-distro-voice/*.log
+/var/log/ai-distro-agent/*.log
+{
+  daily
+  rotate 14
+  compress
+  missingok
+  notifempty
+  create 0640 ai-distro ai-distro
+  copytruncate
+}

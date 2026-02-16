@@ -1,0 +1,5 @@
+ai-distro (0.1.0-1) unstable; urgency=medium
+
+  * Initial packaging scaffold.
+
+ -- AI Distro Team <team@example.com>  Wed, 04 Feb 2026 12:00:00 +0000

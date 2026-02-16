@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "mode": "assistive",
+  "constraints": {
+    "require_confirmation_for": [
+      "package_install",
+      "system_update",
+      "power_reboot",
+      "power_shutdown",
+      "power_sleep",
+      "delete_files",
+      "network_exfiltration"
+    ],
+    "deny_actions": [
+      "rm -rf /",
+      "disable_security_services"
+    ],
+    "package_install_deny": [
+      "rm -rf",
+      "dd if=/dev/zero"
+    ],
+    "package_install_confirm": [
+      "openssl",
+      "docker",
+      "kernel"
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+build/
+src/infra/rootfs/live-build/
+src/rust/target/
+release/*.iso

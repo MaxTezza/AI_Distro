@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+# Post-install steps (scaffold)
+# - enable services
+# - apply KDE defaults
+
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl enable ai-distro-core.service || true
+  systemctl enable ai-distro-voice.service || true
+  systemctl enable ai-distro-agent.service || true
+  systemctl enable ai-distro-agent.socket || true
+fi
+
+# Ensure KDE defaults are present
+if [ -f /etc/xdg/kdeglobals ]; then
+  : # already installed via package
+fi
+
+exit 0

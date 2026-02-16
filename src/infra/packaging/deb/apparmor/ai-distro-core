@@ -1,0 +1,12 @@
+#include <tunables/global>
+
+profile ai-distro-core /usr/bin/ai-distro-core {
+  # Placeholder AppArmor profile
+  # Include common abstractions as needed
+  #include <abstractions/base>
+
+  /usr/bin/ai-distro-core mr,
+  /etc/ai-distro/** r,
+  /var/lib/ai-distro/** rw,
+  /var/log/ai-distro/** rw,
+}

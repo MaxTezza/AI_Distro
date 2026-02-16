@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+# Pre-remove hook for ai-distro-core
+
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl stop ai-distro-core.service || true
+  systemctl disable ai-distro-core.service || true
+fi
+
+exit 0

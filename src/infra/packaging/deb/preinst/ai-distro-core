@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+
+# Pre-install hook for ai-distro-core
+
+exit 0

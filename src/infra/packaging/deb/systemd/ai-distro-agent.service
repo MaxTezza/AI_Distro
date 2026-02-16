@@ -1,0 +1,32 @@
+[Unit]
+Description=AI Distro Agent Runtime
+After=network-online.target
+Wants=network-online.target
+Requires=ai-distro-agent.socket
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ai-distro-agent
+Restart=on-failure
+RestartSec=2
+RuntimeDirectory=ai-distro
+RuntimeDirectoryMode=0755
+StateDirectory=ai-distro-agent
+LogsDirectory=ai-distro-agent
+Environment=AI_DISTRO_IPC_SOCKET=/run/ai-distro/agent.sock
+Environment=AI_DISTRO_INTENT_PARSER=/usr/lib/ai-distro/intent_parser.py
+Environment=AI_DISTRO_MEMORY_DIR=/var/lib/ai-distro-agent/memory
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,2 @@
+# Placeholder udev rules for AI Distro audio and input devices
+# SUBSYSTEM=="sound", TAG+="systemd", ENV{SYSTEMD_WANTS}="ai-distro-voice.service"
