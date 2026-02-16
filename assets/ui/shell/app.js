@@ -7,6 +7,7 @@ const confirmButton = document.getElementById("confirm-button");
 const micButton = document.getElementById("mic-button");
 const voiceToggle = document.getElementById("voice-toggle");
 const personaButtons = Array.from(document.querySelectorAll(".persona-button"));
+const onboardingRestart = document.getElementById("onboarding-restart");
 const onboarding = document.getElementById("onboarding");
 const onboardingTitle = document.getElementById("onboarding-title");
 const onboardingStepLabel = document.getElementById("onboarding-step-label");
@@ -28,6 +29,7 @@ let personaPresets = {};
 let activePersona = "max";
 let onboardingStep = 0;
 let onboardingCompleted = false;
+let onboardingStartedAt = null;
 
 let fillerPhrases = [
   "Working on it.",
@@ -293,12 +295,40 @@ const persistOnboardingState = async (state) => {
   }
 };
 
+const persistOnboardingProgress = async () => {
+  if (!onboardingStartedAt) {
+    onboardingStartedAt = new Date().toISOString();
+  }
+  await persistOnboardingState({
+    version: 1,
+    completed: false,
+    started_at: onboardingStartedAt,
+    last_step: onboardingStep,
+    voice_enabled: voiceEnabled,
+    persona: activePersona,
+  });
+};
+
+const openOnboarding = async (startStep = 0, persist = true) => {
+  onboardingCompleted = false;
+  onboarding.classList.remove("hidden");
+  onboardingStep = Math.max(0, Math.min(startStep, onboardingSteps.length - 1));
+  renderOnboardingStep();
+  if (persist) {
+    await persistOnboardingProgress();
+  }
+};
+
 const completeOnboarding = async (skipped) => {
   onboardingCompleted = true;
   const state = {
     version: 1,
     completed: true,
     skipped: Boolean(skipped),
+    started_at: onboardingStartedAt,
+    last_step: onboardingStep,
+    voice_enabled: voiceEnabled,
+    persona: activePersona,
     completed_at: new Date().toISOString(),
   };
   localStorage.setItem("ai_distro_onboarding_v1_completed", "true");
@@ -310,6 +340,7 @@ const completeOnboarding = async (skipped) => {
 
 const maybeStartOnboarding = async () => {
   const state = await fetchOnboardingState();
+  onboardingStartedAt = state.started_at || null;
   const completedLocal = localStorage.getItem("ai_distro_onboarding_v1_completed") === "true";
   const completedRemote = Boolean(state.completed);
   onboardingCompleted = completedLocal || completedRemote;
@@ -317,9 +348,8 @@ const maybeStartOnboarding = async () => {
     onboarding.classList.add("hidden");
     return;
   }
-  onboarding.classList.remove("hidden");
-  onboardingStep = 0;
-  renderOnboardingStep();
+  const resumeStep = Number.isInteger(state.last_step) ? state.last_step : 0;
+  await openOnboarding(resumeStep, false);
 };
 
 const sendCommand = async (text) => {
@@ -454,12 +484,14 @@ onboardingBack.addEventListener("click", () => {
   if (onboardingStep === 0) return;
   onboardingStep -= 1;
   renderOnboardingStep();
+  persistOnboardingProgress();
 });
 
 onboardingNext.addEventListener("click", async () => {
   if (onboardingStep < onboardingSteps.length - 1) {
     onboardingStep += 1;
     renderOnboardingStep();
+    await persistOnboardingProgress();
     return;
   }
   await completeOnboarding(false);
@@ -467,6 +499,14 @@ onboardingNext.addEventListener("click", async () => {
 
 onboardingSkip.addEventListener("click", async () => {
   await completeOnboarding(true);
+});
+
+onboardingRestart.addEventListener("click", async () => {
+  localStorage.removeItem("ai_distro_onboarding_v1_completed");
+  localStorage.removeItem("ai_distro_onboarding_v1_completed_at");
+  onboardingStartedAt = new Date().toISOString();
+  await openOnboarding(0, true);
+  addMessage("assistant", "Onboarding restarted.");
 });
 
 const ping = async () => {
