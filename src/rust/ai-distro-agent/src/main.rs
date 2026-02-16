@@ -92,6 +92,12 @@ fn handle_package_install(req: &ActionRequest) -> ActionResponse {
     if packages.is_empty() {
         return error_response(&req.name, "empty package list");
     }
+    if packages.len() > 20 {
+        return error_response(&req.name, "too many packages requested");
+    }
+    if packages.iter().any(|pkg| !is_valid_package_name(pkg)) {
+        return error_response(&req.name, "invalid package name");
+    }
 
     let mut args = vec!["install", "-y"];
     args.extend(packages.iter().copied());
@@ -175,6 +181,9 @@ fn handle_open_url(req: &ActionRequest) -> ActionResponse {
     let Some(url) = req.payload.as_deref() else {
         return error_response(&req.name, "missing url");
     };
+    if !is_safe_http_url(url) {
+        return error_response(&req.name, "unsupported or unsafe url");
+    }
     match run_command("xdg-open", &[url], None) {
         Ok(_) => ok_response(&req.name, "Opening browser."),
         Err(err) => error_response(&req.name, &err),
@@ -185,6 +194,9 @@ fn handle_open_app(req: &ActionRequest) -> ActionResponse {
     let Some(app) = req.payload.as_deref() else {
         return error_response(&req.name, "missing app name");
     };
+    if !is_valid_app_name(app) {
+        return error_response(&req.name, "invalid app name");
+    }
     if command_exists("gtk-launch") {
         return match run_command("gtk-launch", &[app], None) {
             Ok(_) => ok_response(&req.name, "Launching app."),
@@ -207,10 +219,13 @@ fn handle_set_volume(req: &ActionRequest) -> ActionResponse {
     let Some(volume) = req.payload.as_deref() else {
         return error_response(&req.name, "missing volume percentage");
     };
+    let Some(parsed) = parse_percent_value(volume) else {
+        return error_response(&req.name, "invalid volume percentage");
+    };
     if !command_exists("pactl") {
         return error_response(&req.name, "pactl not available");
     }
-    let arg = format!("{volume}%");
+    let arg = format!("{parsed}%");
     match run_command("pactl", &["set-sink-volume", "@DEFAULT_SINK@", &arg], None) {
         Ok(_) => ok_response(&req.name, "Volume updated."),
         Err(err) => error_response(&req.name, &err),
@@ -221,8 +236,11 @@ fn handle_set_brightness(req: &ActionRequest) -> ActionResponse {
     let Some(level) = req.payload.as_deref() else {
         return error_response(&req.name, "missing brightness percentage");
     };
+    let Some(parsed) = parse_percent_value(level) else {
+        return error_response(&req.name, "invalid brightness percentage");
+    };
     if command_exists("brightnessctl") {
-        let arg = format!("{level}%");
+        let arg = format!("{parsed}%");
         return match run_command("brightnessctl", &["set", &arg], None) {
             Ok(_) => ok_response(&req.name, "Brightness updated."),
             Err(err) => error_response(&req.name, &err),
@@ -334,6 +352,46 @@ fn command_exists(cmd: &str) -> bool {
         .status()
         .map(|s| s.success())
         .unwrap_or(false)
+}
+
+fn parse_percent_value(raw: &str) -> Option<u8> {
+    if raw.is_empty() || raw.len() > 3 {
+        return None;
+    }
+    let parsed = raw.parse::<u8>().ok()?;
+    if parsed > 100 {
+        return None;
+    }
+    Some(parsed)
+}
+
+fn is_valid_package_name(pkg: &str) -> bool {
+    if pkg.is_empty() || pkg.len() > 64 {
+        return false;
+    }
+    pkg.chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '-' || c == '.' || c == ':')
+}
+
+fn is_valid_app_name(app: &str) -> bool {
+    if app.is_empty() || app.len() > 96 {
+        return false;
+    }
+    app.chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+}
+
+fn is_safe_http_url(url: &str) -> bool {
+    if url.is_empty() || url.len() > 2048 {
+        return false;
+    }
+    if !(url.starts_with("http://") || url.starts_with("https://")) {
+        return false;
+    }
+    if url.chars().any(|c| c.is_ascii_control() || c.is_whitespace()) {
+        return false;
+    }
+    true
 }
 
 fn run_command(
@@ -558,7 +616,12 @@ fn run_ipc_socket(
             return;
         }
     };
-    let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o666));
+    let mode = std::env::var("AI_DISTRO_IPC_SOCKET_MODE")
+        .ok()
+        .and_then(|v| u32::from_str_radix(v.trim_start_matches("0o"), 8).ok())
+        .filter(|v| *v <= 0o777)
+        .unwrap_or(0o660);
+    let _ = fs::set_permissions(path, fs::Permissions::from_mode(mode));
 
     log::info!("ipc socket listening at {}", path);
 
@@ -839,6 +902,31 @@ mod tests {
         };
         let resp = handle_request(&policy, &registry, req);
         assert_eq!(resp.status, "error");
+    }
+
+    #[test]
+    fn parse_percent_enforces_bounds() {
+        assert_eq!(parse_percent_value("0"), Some(0));
+        assert_eq!(parse_percent_value("100"), Some(100));
+        assert_eq!(parse_percent_value("101"), None);
+        assert_eq!(parse_percent_value("-1"), None);
+        assert_eq!(parse_percent_value("abc"), None);
+    }
+
+    #[test]
+    fn package_name_validation_rejects_unsafe_chars() {
+        assert!(is_valid_package_name("vim"));
+        assert!(is_valid_package_name("python3-pip"));
+        assert!(!is_valid_package_name("vim;rm"));
+        assert!(!is_valid_package_name(""));
+    }
+
+    #[test]
+    fn url_validation_allows_http_https_only() {
+        assert!(is_safe_http_url("https://docs.openai.com"));
+        assert!(is_safe_http_url("http://example.com"));
+        assert!(!is_safe_http_url("file:///etc/passwd"));
+        assert!(!is_safe_http_url("javascript:alert(1)"));
     }
 
     fn temp_confirm_dir() -> PathBuf {

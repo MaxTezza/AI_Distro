@@ -4,6 +4,9 @@
 - `AI_DISTRO_IPC_SOCKET` (default: `/run/ai-distro/agent.sock`)
   Path to Unix socket for IPC.
 
+- `AI_DISTRO_IPC_SOCKET_MODE` (default: `660`)
+  Octal permission mode applied to the IPC socket (for example: `660`, `600`).
+
 - `AI_DISTRO_IPC_STDIN` (default: unset)
   If set to `1`, run the IPC loop over stdin/stdout.
 
