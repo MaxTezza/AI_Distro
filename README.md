@@ -63,6 +63,15 @@ Say:
 This uses weather forecast + local calendar events from:
 - `AI_DISTRO_CALENDAR_EVENTS_FILE` (default: `~/.config/ai-distro/calendar-events.json`)
 
+Google Calendar (optional, preferred):
+- Set `AI_DISTRO_GOOGLE_CLIENT_ID` and `AI_DISTRO_GOOGLE_CLIENT_SECRET`
+- Generate refresh token:
+  - `python3 tools/agent/google_calendar_oauth.py auth-url`
+  - Authorize in browser, copy `code` from redirect URL
+  - `python3 tools/agent/google_calendar_oauth.py exchange "<code>"`
+- This writes `~/.config/ai-distro/google-calendar-oauth.json`
+- `plan_day_outfit` will use Google Calendar events first, then fall back to local JSON.
+
 Example file:
 
 ```json

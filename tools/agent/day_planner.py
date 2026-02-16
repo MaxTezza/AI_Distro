@@ -48,6 +48,122 @@ def load_calendar_events(day: dt.date):
     return out
 
 
+def _iso_utc(ts: dt.datetime) -> str:
+    return ts.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def load_google_oauth():
+    cfg_path = os.environ.get(
+        "AI_DISTRO_GOOGLE_CALENDAR_OAUTH_FILE",
+        os.path.expanduser("~/.config/ai-distro/google-calendar-oauth.json"),
+    )
+    cfg = {}
+    try:
+        with open(cfg_path, "r", encoding="utf-8") as fh:
+            raw = json.load(fh)
+        if isinstance(raw, dict):
+            cfg.update(raw)
+    except Exception:
+        pass
+
+    # Env vars override file values.
+    for env_key, dst in (
+        ("AI_DISTRO_GOOGLE_CLIENT_ID", "client_id"),
+        ("AI_DISTRO_GOOGLE_CLIENT_SECRET", "client_secret"),
+        ("AI_DISTRO_GOOGLE_REFRESH_TOKEN", "refresh_token"),
+        ("AI_DISTRO_GOOGLE_CALENDAR_ID", "calendar_id"),
+    ):
+        val = os.environ.get(env_key, "").strip()
+        if val:
+            cfg[dst] = val
+    if "calendar_id" not in cfg or not str(cfg.get("calendar_id", "")).strip():
+        cfg["calendar_id"] = "primary"
+    missing = [k for k in ("client_id", "client_secret", "refresh_token") if not str(cfg.get(k, "")).strip()]
+    if missing:
+        return None
+    return cfg
+
+
+def google_access_token(cfg):
+    body = urllib.parse.urlencode(
+        {
+            "client_id": cfg["client_id"],
+            "client_secret": cfg["client_secret"],
+            "refresh_token": cfg["refresh_token"],
+            "grant_type": "refresh_token",
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        "https://oauth2.googleapis.com/token",
+        data=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=8.0) as resp:
+        payload = json.loads(resp.read().decode("utf-8", errors="ignore"))
+    token = str(payload.get("access_token", "")).strip()
+    if not token:
+        return None
+    return token
+
+
+def load_google_calendar_events(day: dt.date):
+    cfg = load_google_oauth()
+    if not cfg:
+        return None
+    try:
+        token = google_access_token(cfg)
+        if not token:
+            return None
+        day_start = dt.datetime.combine(day, dt.time.min, tzinfo=dt.timezone.utc)
+        day_end = day_start + dt.timedelta(days=1)
+        params = urllib.parse.urlencode(
+            {
+                "singleEvents": "true",
+                "orderBy": "startTime",
+                "timeMin": _iso_utc(day_start),
+                "timeMax": _iso_utc(day_end),
+                "maxResults": "20",
+            }
+        )
+        cal_id = urllib.parse.quote(str(cfg.get("calendar_id", "primary")), safe="")
+        url = f"https://www.googleapis.com/calendar/v3/calendars/{cal_id}/events?{params}"
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        with urllib.request.urlopen(req, timeout=8.0) as resp:
+            payload = json.loads(resp.read().decode("utf-8", errors="ignore"))
+    except Exception:
+        return None
+
+    items = payload.get("items", [])
+    if not isinstance(items, list):
+        return []
+    out = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        summary = str(item.get("summary", "event")).strip() or "event"
+        start = item.get("start", {})
+        if not isinstance(start, dict):
+            start = {}
+        start_raw = str(start.get("dateTime") or start.get("date") or "").strip()
+        text = f"{summary} {item.get('location', '')}".lower()
+        dress = "casual"
+        if any(k in text for k in ("interview", "wedding", "ceremony", "formal")):
+            dress = "formal"
+        elif any(k in text for k in ("meeting", "office", "client", "work")):
+            dress = "business"
+        outdoor = any(k in text for k in ("park", "run", "hike", "walk", "outdoor", "soccer", "football"))
+        out.append(
+            {
+                "title": summary,
+                "start": start_raw,
+                "outdoor": outdoor,
+                "dress_code": dress,
+            }
+        )
+    return out
+
+
 def fetch_weather(day: dt.date):
     location = os.environ.get("AI_DISTRO_WEATHER_LOCATION", "Austin").strip() or "Austin"
     encoded_loc = urllib.parse.quote(location)
@@ -142,7 +258,9 @@ def main():
     if len(sys.argv) > 1:
         payload = " ".join(sys.argv[1:])
     day = target_date(payload)
-    events = load_calendar_events(day)
+    events = load_google_calendar_events(day)
+    if events is None:
+        events = load_calendar_events(day)
     forecast = fetch_weather(day)
     tips = clothing_rules(forecast, events)
     msg = build_message(day, forecast, events, tips)
@@ -151,4 +269,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

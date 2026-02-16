@@ -34,5 +34,6 @@ cp "$ROOT_DIR/src/infra/packaging/deb/xdg/ai-distro-shell.desktop" "$ROOT/etc/xd
 # Intent parser
 cp "$ROOT_DIR/tools/agent/intent_parser.py" "$ROOT/usr/lib/ai-distro/intent_parser.py"
 cp "$ROOT_DIR/tools/agent/day_planner.py" "$ROOT/usr/lib/ai-distro/day_planner.py"
+cp "$ROOT_DIR/tools/agent/google_calendar_oauth.py" "$ROOT/usr/lib/ai-distro/google_calendar_oauth.py"
 
 echo "Staged Debian root at $ROOT"

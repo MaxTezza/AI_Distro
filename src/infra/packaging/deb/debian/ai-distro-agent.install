@@ -1,6 +1,7 @@
 build/deb-root/usr/bin/ai-distro-agent usr/bin/
 build/deb-root/usr/lib/ai-distro/intent_parser.py usr/lib/ai-distro/
 build/deb-root/usr/lib/ai-distro/day_planner.py usr/lib/ai-distro/
+build/deb-root/usr/lib/ai-distro/google_calendar_oauth.py usr/lib/ai-distro/
 configs/agent.json etc/ai-distro/agent.json
 configs/persona.json etc/ai-distro/persona.json
 configs/persona.alfred.json etc/ai-distro/persona.alfred.json
