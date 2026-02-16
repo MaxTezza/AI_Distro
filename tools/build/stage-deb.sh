@@ -35,7 +35,9 @@ cp "$ROOT_DIR/src/infra/packaging/deb/xdg/ai-distro-shell.desktop" "$ROOT/etc/xd
 cp "$ROOT_DIR/tools/agent/intent_parser.py" "$ROOT/usr/lib/ai-distro/intent_parser.py"
 cp "$ROOT_DIR/tools/agent/day_planner.py" "$ROOT/usr/lib/ai-distro/day_planner.py"
 cp "$ROOT_DIR/tools/agent/google_calendar_oauth.py" "$ROOT/usr/lib/ai-distro/google_calendar_oauth.py"
+cp "$ROOT_DIR/tools/agent/google_gmail_oauth.py" "$ROOT/usr/lib/ai-distro/google_gmail_oauth.py"
 cp "$ROOT_DIR/tools/agent/weather_tool.py" "$ROOT/usr/lib/ai-distro/weather_tool.py"
 cp "$ROOT_DIR/tools/agent/calendar_tool.py" "$ROOT/usr/lib/ai-distro/calendar_tool.py"
+cp "$ROOT_DIR/tools/agent/gmail_tool.py" "$ROOT/usr/lib/ai-distro/gmail_tool.py"
 
 echo "Staged Debian root at $ROOT"
