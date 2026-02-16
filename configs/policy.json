@@ -23,6 +23,20 @@
       "openssl",
       "docker",
       "kernel"
+    ],
+    "open_url_allowed_domains": [
+      "openai.com",
+      "google.com",
+      "mail.google.com"
+    ],
+    "open_app_allowed": [
+      "firefox",
+      "settings",
+      "org.kde.systemsettings"
+    ],
+    "list_files_allowed_prefixes": [
+      "/home",
+      "/tmp"
     ]
   }
 }

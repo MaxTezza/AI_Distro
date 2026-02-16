@@ -42,6 +42,14 @@ Notes:
 - Require confirmation for package, power, and other risky operations.
 - Keep memory writes explicit (`remember ...`) and user-controlled.
 
+## Tuning Utility Safely
+Policy controls live in `configs/policy.json`:
+- `open_url_allowed_domains`
+- `open_app_allowed`
+- `list_files_allowed_prefixes`
+
+Increase utility by extending these allowlists, instead of allowing arbitrary command execution.
+
 ## Docs
 - `docs/VOICE_UX.md`
 - `docs/DESKTOP_UI.md`

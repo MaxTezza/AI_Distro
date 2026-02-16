@@ -85,10 +85,20 @@ pub struct PolicyConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PolicyConstraints {
+    #[serde(default)]
     pub require_confirmation_for: Vec<String>,
+    #[serde(default)]
     pub deny_actions: Vec<String>,
+    #[serde(default)]
     pub package_install_deny: Vec<String>,
+    #[serde(default)]
     pub package_install_confirm: Vec<String>,
+    #[serde(default)]
+    pub open_url_allowed_domains: Vec<String>,
+    #[serde(default)]
+    pub open_app_allowed: Vec<String>,
+    #[serde(default)]
+    pub list_files_allowed_prefixes: Vec<String>,
 }
 
 impl Default for PolicyConfig {
@@ -101,6 +111,9 @@ impl Default for PolicyConfig {
                 deny_actions: vec![],
                 package_install_deny: vec![],
                 package_install_confirm: vec![],
+                open_url_allowed_domains: vec![],
+                open_app_allowed: vec![],
+                list_files_allowed_prefixes: vec![],
             },
         }
     }
@@ -254,6 +267,9 @@ mod tests {
                 deny_actions: vec!["rm -rf /".to_string()],
                 package_install_deny: vec![],
                 package_install_confirm: vec![],
+                open_url_allowed_domains: vec![],
+                open_app_allowed: vec![],
+                list_files_allowed_prefixes: vec![],
             },
         }
     }
@@ -394,4 +410,3 @@ impl ActionRequest {
         }
     }
 }
-

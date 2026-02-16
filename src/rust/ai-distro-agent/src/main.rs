@@ -455,6 +455,97 @@ fn read_recent_notes(limit: usize) -> Result<Vec<String>, String> {
     Ok(notes)
 }
 
+fn extract_url_host(url: &str) -> Option<String> {
+    let (_, rest) = url.split_once("://")?;
+    let host_port = rest.split('/').next()?.trim();
+    if host_port.is_empty() {
+        return None;
+    }
+    let host = host_port.split(':').next()?.trim().to_ascii_lowercase();
+    if host.is_empty() {
+        None
+    } else {
+        Some(host)
+    }
+}
+
+fn domain_matches(host: &str, allowed: &str) -> bool {
+    let allowed = allowed.trim().to_ascii_lowercase();
+    if allowed.is_empty() {
+        return false;
+    }
+    host == allowed || host.ends_with(&format!(".{allowed}"))
+}
+
+fn is_path_allowed(path: &str, allowed_prefixes: &[String]) -> bool {
+    if allowed_prefixes.is_empty() {
+        return true;
+    }
+    let canonical = fs::canonicalize(path).ok();
+    let candidate = canonical
+        .as_ref()
+        .and_then(|p| p.to_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| path.to_string());
+
+    allowed_prefixes.iter().any(|prefix| {
+        let normalized = prefix.trim();
+        !normalized.is_empty()
+            && (candidate == normalized
+                || candidate.starts_with(&format!("{normalized}/")))
+    })
+}
+
+fn enforce_action_allowlists(
+    policy: &ai_distro_common::PolicyConfig,
+    request: &ActionRequest,
+) -> Result<(), String> {
+    match request.name.as_str() {
+        "open_url" => {
+            let Some(url) = request.payload.as_deref() else {
+                return Err("missing url".to_string());
+            };
+            let domains = &policy.constraints.open_url_allowed_domains;
+            if domains.is_empty() {
+                return Ok(());
+            }
+            let Some(host) = extract_url_host(url) else {
+                return Err("invalid url host".to_string());
+            };
+            if domains.iter().any(|allowed| domain_matches(&host, allowed)) {
+                Ok(())
+            } else {
+                Err("url domain denied by policy".to_string())
+            }
+        }
+        "open_app" => {
+            let Some(app) = request.payload.as_deref() else {
+                return Err("missing app name".to_string());
+            };
+            let apps = &policy.constraints.open_app_allowed;
+            if apps.is_empty() {
+                return Ok(());
+            }
+            if apps.iter().any(|allowed| allowed == app) {
+                Ok(())
+            } else {
+                Err("app denied by policy".to_string())
+            }
+        }
+        "list_files" => {
+            let Some(path) = request.payload.as_deref() else {
+                return Err("missing path".to_string());
+            };
+            if is_path_allowed(path, &policy.constraints.list_files_allowed_prefixes) {
+                Ok(())
+            } else {
+                Err("path denied by policy".to_string())
+            }
+        }
+        _ => Ok(()),
+    }
+}
+
 fn dispatch_action(
     policy: &ai_distro_common::PolicyConfig,
     registry: &HashMap<&'static str, Handler>,
@@ -534,6 +625,17 @@ fn handle_request(
             action: request.name,
             status: "error".to_string(),
             message: Some("unsupported request version".to_string()),
+            capabilities: None,
+            confirmation_id: None,
+        };
+    }
+
+    if let Err(detail) = enforce_action_allowlists(policy, &request) {
+        return ActionResponse {
+            version: 1,
+            action: request.name,
+            status: "deny".to_string(),
+            message: Some(detail),
             capabilities: None,
             confirmation_id: None,
         };
@@ -927,6 +1029,39 @@ mod tests {
         assert!(is_safe_http_url("http://example.com"));
         assert!(!is_safe_http_url("file:///etc/passwd"));
         assert!(!is_safe_http_url("javascript:alert(1)"));
+    }
+
+    #[test]
+    fn allowlist_matches_subdomains() {
+        assert!(domain_matches("docs.openai.com", "openai.com"));
+        assert!(domain_matches("openai.com", "openai.com"));
+        assert!(!domain_matches("evil.com", "openai.com"));
+    }
+
+    #[test]
+    fn policy_deny_open_url_outside_allowlist() {
+        let mut policy = ai_distro_common::PolicyConfig::default();
+        policy.constraints.open_url_allowed_domains = vec!["openai.com".to_string()];
+        let req = ActionRequest {
+            version: Some(1),
+            name: "open_url".to_string(),
+            payload: Some("https://example.com".to_string()),
+        };
+        let denied = enforce_action_allowlists(&policy, &req).is_err();
+        assert!(denied);
+    }
+
+    #[test]
+    fn policy_allow_list_files_prefix() {
+        let mut policy = ai_distro_common::PolicyConfig::default();
+        policy.constraints.list_files_allowed_prefixes = vec!["/tmp".to_string()];
+        let req = ActionRequest {
+            version: Some(1),
+            name: "list_files".to_string(),
+            payload: Some("/etc".to_string()),
+        };
+        let denied = enforce_action_allowlists(&policy, &req).is_err();
+        assert!(denied);
     }
 
     fn temp_confirm_dir() -> PathBuf {
