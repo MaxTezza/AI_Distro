@@ -68,6 +68,16 @@ def test_calendar_list_day():
     assert res["intent"] == "calendar_list_day"
     assert res["payload"] == "today"
 
+def test_email_summary():
+    res = run("summarize my email")
+    assert res["intent"] == "email_inbox_summary"
+    assert res["payload"] == "in:inbox newer_than:2d"
+
+def test_email_search():
+    res = run("search my email for invoice")
+    assert res["intent"] == "email_search"
+    assert res["payload"] == "invoice"
+
 
 if __name__ == "__main__":
     test_install_multiple()
@@ -80,4 +90,6 @@ if __name__ == "__main__":
     test_plan_day_outfit()
     test_weather_get()
     test_calendar_list_day()
+    test_email_summary()
+    test_email_search()
     print("ok")

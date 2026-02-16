@@ -52,6 +52,8 @@
       "weather_get": 120,
       "calendar_list_day": 120,
       "calendar_add_event": 60,
+      "email_inbox_summary": 90,
+      "email_search": 90,
       "plan_day_outfit": 60,
       "ping": 240,
       "get_capabilities": 240,

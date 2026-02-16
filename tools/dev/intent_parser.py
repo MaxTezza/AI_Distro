@@ -61,6 +61,14 @@ def parse_intent(text: str, mapping: dict):
         if payload:
             return "calendar_add_event", payload
 
+    if text_n in ("summarize my email", "summarize my inbox", "email summary", "inbox summary"):
+        return "email_inbox_summary", "in:inbox newer_than:2d"
+
+    if text_n.startswith("search my email for ") or text_n.startswith("search inbox for "):
+        payload = extract_payload("email_search", text_n)
+        if payload:
+            return "email_search", payload
+
     url_payload = extract_payload("open_url", text_n)
     if url_payload:
         return "open_url", url_payload
@@ -183,6 +191,14 @@ def extract_payload(intent: str, text_n: str):
             dress = "formal"
         outdoor = "true" if any(k in title for k in ("walk", "run", "hike", "outdoor", "park")) else "false"
         return f"{day}|{when}|{title}|{dress}|{outdoor}"
+    if intent == "email_inbox_summary":
+        return "in:inbox newer_than:2d"
+    if intent == "email_search":
+        for prefix in ("search my email for ", "search inbox for "):
+            if text_n.startswith(prefix):
+                q = text_n[len(prefix):].strip()
+                return q or None
+        return None
     if intent == "system_update":
         return "stable"
     return None

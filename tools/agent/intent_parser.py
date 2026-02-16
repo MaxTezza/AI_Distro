@@ -219,6 +219,28 @@ def parse_calendar_add(text):
     return f"{day}|{time_part}|{title}|{dress}|{outdoor}"
 
 
+def parse_email_summary(text):
+    prompts = (
+        "summarize my email",
+        "summarize my inbox",
+        "email summary",
+        "inbox summary",
+    )
+    if text in prompts:
+        return "in:inbox newer_than:2d"
+    return None
+
+
+def parse_email_search(text):
+    # "search my email for invoices"
+    m = re.search(r"\bsearch\b(?:\s+my)?\s+(?:email|inbox)\s+(?:for|about)\s+(.+)$", text)
+    if m:
+        query = m.group(1).strip()
+        if query:
+            return query
+    return None
+
+
 def main():
     if len(sys.argv) < 2:
         print(json.dumps(to_action("unknown", "")))
@@ -267,6 +289,16 @@ def main():
     calendar_list = parse_calendar_list(text)
     if calendar_list:
         print(json.dumps(to_action("calendar_list_day", calendar_list)))
+        return
+
+    email_summary = parse_email_summary(text)
+    if email_summary:
+        print(json.dumps(to_action("email_inbox_summary", email_summary)))
+        return
+
+    email_query = parse_email_search(text)
+    if email_query:
+        print(json.dumps(to_action("email_search", email_query)))
         return
 
     files_path = parse_list_files(text)

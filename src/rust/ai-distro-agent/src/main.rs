@@ -70,6 +70,8 @@ fn action_registry() -> HashMap<&'static str, Handler> {
     map.insert("weather_get", handle_weather_get as Handler);
     map.insert("calendar_add_event", handle_calendar_add_event as Handler);
     map.insert("calendar_list_day", handle_calendar_list_day as Handler);
+    map.insert("email_inbox_summary", handle_email_inbox_summary as Handler);
+    map.insert("email_search", handle_email_search as Handler);
     map.insert("plan_day_outfit", handle_plan_day_outfit as Handler);
     map.insert("unknown", handle_unknown as Handler);
     map
@@ -177,6 +179,8 @@ fn handle_get_capabilities(req: &ActionRequest) -> ActionResponse {
                 "weather_get".to_string(),
                 "calendar_add_event".to_string(),
                 "calendar_list_day".to_string(),
+                "email_inbox_summary".to_string(),
+                "email_search".to_string(),
                 "plan_day_outfit".to_string(),
             ],
             protocol_version: 1,
@@ -436,6 +440,70 @@ fn handle_calendar_list_day(req: &ActionRequest) -> ActionResponse {
             ),
         ),
         Err(err) => error_response(&req.name, &format!("calendar tool launch failed: {err}")),
+    }
+}
+
+fn handle_email_inbox_summary(req: &ActionRequest) -> ActionResponse {
+    let payload = req.payload.as_deref().unwrap_or("in:inbox newer_than:2d");
+    let tool = std::env::var("AI_DISTRO_GMAIL_TOOL")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/gmail_tool.py".to_string());
+    match Command::new("python3")
+        .arg(tool)
+        .arg("summary")
+        .arg(payload)
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            let msg = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            ok_response(
+                &req.name,
+                if msg.is_empty() {
+                    "No inbox summary available."
+                } else {
+                    &msg
+                },
+            )
+        }
+        Ok(out) => error_response(
+            &req.name,
+            &format!(
+                "gmail summary failed: {}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ),
+        ),
+        Err(err) => error_response(&req.name, &format!("gmail tool launch failed: {err}")),
+    }
+}
+
+fn handle_email_search(req: &ActionRequest) -> ActionResponse {
+    let payload = req.payload.as_deref().unwrap_or("in:inbox");
+    let tool = std::env::var("AI_DISTRO_GMAIL_TOOL")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/gmail_tool.py".to_string());
+    match Command::new("python3")
+        .arg(tool)
+        .arg("search")
+        .arg(payload)
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            let msg = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            ok_response(
+                &req.name,
+                if msg.is_empty() {
+                    "No email search results."
+                } else {
+                    &msg
+                },
+            )
+        }
+        Ok(out) => error_response(
+            &req.name,
+            &format!(
+                "gmail search failed: {}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ),
+        ),
+        Err(err) => error_response(&req.name, &format!("gmail tool launch failed: {err}")),
     }
 }
 

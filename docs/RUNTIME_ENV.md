@@ -22,11 +22,20 @@
 - `AI_DISTRO_CALENDAR_TOOL` (default: `/usr/lib/ai-distro/calendar_tool.py`)
   Helper script for local calendar add/list requests (`calendar_add_event`, `calendar_list_day`).
 
+- `AI_DISTRO_GMAIL_TOOL` (default: `/usr/lib/ai-distro/gmail_tool.py`)
+  Helper script for Gmail read-only actions (`email_inbox_summary`, `email_search`).
+
 - `AI_DISTRO_GOOGLE_CALENDAR_OAUTH_FILE` (default: `~/.config/ai-distro/google-calendar-oauth.json`)
   OAuth config for Google Calendar integration (`client_id`, `client_secret`, `refresh_token`, `calendar_id`).
 
+- `AI_DISTRO_GOOGLE_GMAIL_OAUTH_FILE` (default: `~/.config/ai-distro/google-gmail-oauth.json`)
+  OAuth config for Gmail integration (`client_id`, `client_secret`, `refresh_token`).
+
 - `AI_DISTRO_GOOGLE_CLIENT_ID`, `AI_DISTRO_GOOGLE_CLIENT_SECRET`, `AI_DISTRO_GOOGLE_REFRESH_TOKEN`
   Optional env overrides for Google Calendar OAuth credentials.
+
+- `AI_DISTRO_GOOGLE_GMAIL_REFRESH_TOKEN`
+  Optional env override for Gmail refresh token (or reuse `AI_DISTRO_GOOGLE_REFRESH_TOKEN`).
 
 - `AI_DISTRO_GOOGLE_CALENDAR_ID` (default: `primary`)
   Calendar ID used for Google Calendar event fetch.
