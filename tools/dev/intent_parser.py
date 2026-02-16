@@ -26,6 +26,29 @@ def parse_intent(text: str, mapping: dict):
                 return intent, extract_payload(intent, text_n)
 
     # fallback keyword heuristics
+    if text_n.startswith("remember ") or text_n.startswith("note "):
+        payload = extract_payload("remember", text_n)
+        if payload:
+            return "remember", payload
+
+    if text_n.startswith("remember that "):
+        payload = extract_payload("remember", text_n)
+        if payload:
+            return "remember", payload
+
+    if text_n.startswith("list files"):
+        payload = extract_payload("list_files", text_n)
+        return "list_files", payload
+
+    url_payload = extract_payload("open_url", text_n)
+    if url_payload:
+        return "open_url", url_payload
+
+    if text_n.startswith("open ") or text_n.startswith("launch "):
+        payload = extract_payload("open_app", text_n)
+        if payload:
+            return "open_app", payload
+
     if text_n.startswith("install ") or text_n.startswith("add "):
         payload = extract_payload("package_install", text_n)
         return "package_install", payload
@@ -38,6 +61,12 @@ def parse_intent(text: str, mapping: dict):
             return "network_wifi_off", None
         if "on" in text_n or "enable" in text_n:
             return "network_wifi_on", None
+
+    if "bluetooth" in text_n:
+        if "off" in text_n or "disable" in text_n:
+            return "network_bluetooth_off", None
+        if "on" in text_n or "enable" in text_n:
+            return "network_bluetooth_on", None
 
     if "volume" in text_n:
         m = re.search(r"(\d+)", text_n)
@@ -59,6 +88,45 @@ def parse_intent(text: str, mapping: dict):
 
 
 def extract_payload(intent: str, text_n: str):
+    if intent == "remember":
+        for prefix in ("remember that ", "remember ", "note "):
+            if text_n.startswith(prefix):
+                payload = text_n[len(prefix):].strip()
+                return payload if payload else None
+        return None
+
+    if intent == "list_files":
+        m = re.search(r"(?:in|from)\s+(.+)$", text_n)
+        if m:
+            return m.group(1).strip()
+        return "."
+
+    if intent == "open_url":
+        m = re.search(r"\bhttps?://\S+\b", text_n)
+        if m:
+            return m.group(0)
+        m = re.search(r"\b(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+\b", text_n)
+        if m:
+            host = m.group(0)
+            if not host.startswith(("http://", "https://")):
+                host = f"https://{host}"
+            return host
+        for prefix in ("go to ", "open site ", "open website "):
+            if text_n.startswith(prefix):
+                tail = text_n[len(prefix):].strip()
+                if tail:
+                    if not re.match(r"^https?://", tail):
+                        tail = f"https://{tail}"
+                    return tail
+        return None
+
+    if intent == "open_app":
+        for prefix in ("open ", "launch "):
+            if text_n.startswith(prefix):
+                payload = text_n[len(prefix):].strip()
+                return payload if payload else None
+        return None
+
     if intent == "package_install":
         parts = text_n.split(" ", 1)
         if len(parts) < 2:

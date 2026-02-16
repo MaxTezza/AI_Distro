@@ -1,0 +1,50 @@
+[
+  {
+    "utterance": "install vim and curl",
+    "intent": "package_install",
+    "payload": "vim,curl"
+  },
+  {
+    "utterance": "update the system",
+    "intent": "system_update",
+    "payload": "stable"
+  },
+  {
+    "utterance": "set volume to 40%",
+    "intent": "set_volume",
+    "payload": "40"
+  },
+  {
+    "utterance": "set brightness to 60 percent",
+    "intent": "set_brightness",
+    "payload": "60"
+  },
+  {
+    "utterance": "turn on wifi",
+    "intent": "network_wifi_on"
+  },
+  {
+    "utterance": "turn off bluetooth",
+    "intent": "network_bluetooth_off"
+  },
+  {
+    "utterance": "go to docs.openai.com",
+    "intent": "open_url",
+    "payload": "https://docs.openai.com"
+  },
+  {
+    "utterance": "open firefox",
+    "intent": "open_app",
+    "payload": "firefox"
+  },
+  {
+    "utterance": "remember that my printer is in the office",
+    "intent": "remember",
+    "payload": "my printer is in the office"
+  },
+  {
+    "utterance": "list files in /home/jmt3",
+    "intent": "list_files",
+    "payload": "/home/jmt3"
+  }
+]

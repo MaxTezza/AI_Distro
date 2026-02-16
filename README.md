@@ -7,3 +7,4 @@ Early scaffolding for a voice-first, agentic Linux distribution.
 - `docs/DESKTOP_UI.md`
 - `docs/IPC.md`
 - `docs/RUNTIME_ENV.md`
+- `docs/VOICE_ACCEPTANCE.md`
