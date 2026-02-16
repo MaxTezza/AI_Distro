@@ -53,6 +53,11 @@ def test_list_files():
     assert res["intent"] == "list_files"
     assert res["payload"] == "/home/jmt3"
 
+def test_plan_day_outfit():
+    res = run("what should i wear today")
+    assert res["intent"] == "plan_day_outfit"
+    assert res["payload"] == "today"
+
 
 if __name__ == "__main__":
     test_install_multiple()
@@ -62,4 +67,5 @@ if __name__ == "__main__":
     test_open_app()
     test_remember()
     test_list_files()
+    test_plan_day_outfit()
     print("ok")

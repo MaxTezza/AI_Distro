@@ -13,6 +13,9 @@
 - `AI_DISTRO_INTENT_PARSER` (default: `/usr/lib/ai-distro/intent_parser.py`)
   Path to the intent parser CLI for natural language requests.
 
+- `AI_DISTRO_DAY_PLANNER` (default: `/usr/lib/ai-distro/day_planner.py`)
+  Helper script for weather + calendar clothing recommendations (`plan_day_outfit`).
+
 - `AI_DISTRO_INTENT_STDIN` (default: unset)
   If set to `1`, read natural language text from stdin and emit intent JSON.
 
@@ -47,3 +50,9 @@
 
 - `AI_DISTRO_AUDIT_ROTATE_BYTES` (default: `5242880`)
   Rotate audit log when it reaches this size (bytes); a hash-chained rotation anchor is written into the new file.
+
+- `AI_DISTRO_WEATHER_LOCATION` (default: `Austin`)
+  Location passed to the day planner weather fetch.
+
+- `AI_DISTRO_CALENDAR_EVENTS_FILE` (default: `~/.config/ai-distro/calendar-events.json`)
+  Local calendar events source used by the day planner.

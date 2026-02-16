@@ -40,6 +40,10 @@ def parse_intent(text: str, mapping: dict):
         payload = extract_payload("list_files", text_n)
         return "list_files", payload
 
+    if "what should i wear" in text_n or ("outfit" in text_n and "recommend" in text_n):
+        payload = "tomorrow" if "tomorrow" in text_n else "today"
+        return "plan_day_outfit", payload
+
     url_payload = extract_payload("open_url", text_n)
     if url_payload:
         return "open_url", url_payload
@@ -140,6 +144,8 @@ def extract_payload(intent: str, text_n: str):
     if intent in ("set_volume", "set_brightness"):
         m = re.search(r"(\d+)", text_n)
         return m.group(1) if m else None
+    if intent == "plan_day_outfit":
+        return "tomorrow" if "tomorrow" in text_n else "today"
     if intent == "system_update":
         return "stable"
     return None

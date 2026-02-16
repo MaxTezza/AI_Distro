@@ -67,6 +67,7 @@ fn action_registry() -> HashMap<&'static str, Handler> {
     map.insert("power_sleep", handle_power_sleep as Handler);
     map.insert("remember", handle_remember as Handler);
     map.insert("list_files", handle_list_files as Handler);
+    map.insert("plan_day_outfit", handle_plan_day_outfit as Handler);
     map.insert("unknown", handle_unknown as Handler);
     map
 }
@@ -170,6 +171,7 @@ fn handle_get_capabilities(req: &ActionRequest) -> ActionResponse {
                 "power_sleep".to_string(),
                 "remember".to_string(),
                 "list_files".to_string(),
+                "plan_day_outfit".to_string(),
             ],
             protocol_version: 1,
         }),
@@ -318,6 +320,34 @@ fn handle_remember(req: &ActionRequest) -> ActionResponse {
         return error_response(&req.name, &err);
     }
     ok_response(&req.name, "I'll remember that.")
+}
+
+fn handle_plan_day_outfit(req: &ActionRequest) -> ActionResponse {
+    let payload = req.payload.as_deref().unwrap_or("today");
+    let planner = std::env::var("AI_DISTRO_DAY_PLANNER")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/day_planner.py".to_string());
+    match Command::new("python3").arg(planner).arg(payload).output() {
+        Ok(out) if out.status.success() => {
+            let msg = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if msg.is_empty() {
+                ok_response(&req.name, "No outfit recommendation available.")
+            } else {
+                ok_response(&req.name, &msg)
+            }
+        }
+        Ok(out) => {
+            let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
+            error_response(
+                &req.name,
+                if err.is_empty() {
+                    "failed to build clothing recommendation"
+                } else {
+                    &err
+                },
+            )
+        }
+        Err(err) => error_response(&req.name, &format!("planner failed: {err}")),
+    }
 }
 
 fn handle_unknown(req: &ActionRequest) -> ActionResponse {

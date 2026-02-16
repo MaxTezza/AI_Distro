@@ -55,6 +55,35 @@ Increase utility by extending these allowlists, instead of allowing arbitrary co
 Agent outcomes are also written to a JSONL audit trail (`AI_DISTRO_AUDIT_LOG`) for incident review and tuning.
 Audit entries are hash-chained and survive rotation (`AI_DISTRO_AUDIT_ROTATE_BYTES`) with continuity anchors.
 
+## Weather + Calendar Outfit Recommendation (v1)
+Say:
+- `what should i wear today`
+- `what should i wear tomorrow`
+
+This uses weather forecast + local calendar events from:
+- `AI_DISTRO_CALENDAR_EVENTS_FILE` (default: `~/.config/ai-distro/calendar-events.json`)
+
+Example file:
+
+```json
+[
+  {
+    "date": "2026-02-16",
+    "start": "09:00",
+    "title": "Office planning meeting",
+    "dress_code": "business",
+    "outdoor": false
+  },
+  {
+    "date": "2026-02-16",
+    "start": "18:00",
+    "title": "Evening walk",
+    "dress_code": "casual",
+    "outdoor": true
+  }
+]
+```
+
 ## Docs
 - `docs/VOICE_UX.md`
 - `docs/DESKTOP_UI.md`

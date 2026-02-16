@@ -142,6 +142,31 @@ def parse_remember(text):
     return match.group(1).strip()
 
 
+def parse_outfit_planner(text):
+    prompts = (
+        "what should i wear",
+        "what should i wear today",
+        "what should i wear tomorrow",
+        "what should i wear for today",
+        "what should i wear for tomorrow",
+        "what should i wear based on my calendar",
+        "outfit recommendation",
+        "give me an outfit recommendation",
+        "clothing recommendation",
+    )
+    if text in prompts:
+        if "tomorrow" in text:
+            return "tomorrow"
+        return "today"
+    if "what should i wear" in text:
+        return "tomorrow" if "tomorrow" in text else "today"
+    if "outfit" in text and "recommend" in text:
+        return "tomorrow" if "tomorrow" in text else "today"
+    if "clothing" in text and "recommend" in text:
+        return "tomorrow" if "tomorrow" in text else "today"
+    return None
+
+
 def main():
     if len(sys.argv) < 2:
         print(json.dumps(to_action("unknown", "")))
@@ -170,6 +195,11 @@ def main():
     remember = parse_remember(text)
     if remember:
         print(json.dumps(to_action("remember", remember)))
+        return
+
+    outfit = parse_outfit_planner(text)
+    if outfit:
+        print(json.dumps(to_action("plan_day_outfit", outfit)))
         return
 
     files_path = parse_list_files(text)
