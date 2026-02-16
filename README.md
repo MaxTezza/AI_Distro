@@ -9,3 +9,4 @@ Early scaffolding for a voice-first, agentic Linux distribution.
 - `docs/RUNTIME_ENV.md`
 - `docs/VOICE_ACCEPTANCE.md`
 - `docs/TOP20_TASKS.md`
+- `docs/PROJECT_BRIEF.md`
