@@ -311,6 +311,114 @@ input {
   font-size: 13px;
 }
 
+.onboarding {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 10, 18, 0.72);
+  backdrop-filter: blur(8px);
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.onboarding-panel {
+  width: min(760px, 96vw);
+  border-radius: 26px;
+  border: 1px solid var(--stroke);
+  background: linear-gradient(150deg, rgba(12, 18, 30, 0.96), rgba(17, 24, 40, 0.94));
+  box-shadow: var(--shadow);
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.onboarding-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.onboarding-kicker {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  margin-bottom: 6px;
+}
+
+.onboarding-title-wrap h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.onboarding-progress-wrap {
+  display: grid;
+  gap: 8px;
+}
+
+.onboarding-step-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.onboarding-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.onboarding-progress-bar {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(140deg, #48f7c3 0%, #4ea2ff 100%);
+  transition: width 0.25s ease;
+}
+
+.onboarding-body {
+  border: 1px solid var(--stroke);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 18px;
+}
+
+.onboarding-body h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+
+.onboarding-body p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.onboarding-buttons {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.onboarding-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.onboarding-actions .primary,
+.onboarding-actions .ghost {
+  min-width: 120px;
+}
+
+.onboarding-note {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 @keyframes orbit {
   from {
     transform: translate(-10%, -8%) scale(1);
@@ -346,5 +454,18 @@ input {
   }
   .input-wrap {
     grid-template-columns: 1fr;
+  }
+  .onboarding-panel {
+    padding: 18px;
+  }
+  .onboarding-title-wrap h1 {
+    font-size: 24px;
+  }
+  .onboarding-actions {
+    flex-direction: column-reverse;
+  }
+  .onboarding-actions .primary,
+  .onboarding-actions .ghost {
+    width: 100%;
   }
 }

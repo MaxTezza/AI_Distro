@@ -74,6 +74,32 @@
       </footer>
     </main>
 
+    <section id="onboarding" class="onboarding hidden" aria-live="polite">
+      <div class="onboarding-panel">
+        <div class="onboarding-head">
+          <div class="onboarding-title-wrap">
+            <div class="onboarding-kicker">Onboarding Wizard v1</div>
+            <h1 id="onboarding-title">Welcome</h1>
+          </div>
+          <button id="onboarding-skip" class="ghost" type="button">Skip</button>
+        </div>
+
+        <div class="onboarding-progress-wrap">
+          <div id="onboarding-step-label" class="onboarding-step-label">Step 1 of 5</div>
+          <div class="onboarding-progress">
+            <div id="onboarding-progress-bar" class="onboarding-progress-bar"></div>
+          </div>
+        </div>
+
+        <div id="onboarding-body" class="onboarding-body"></div>
+
+        <div class="onboarding-actions">
+          <button id="onboarding-back" class="ghost" type="button">Back</button>
+          <button id="onboarding-next" class="primary" type="button">Next</button>
+        </div>
+      </div>
+    </section>
+
     <script src="app.js"></script>
   </body>
 </html>

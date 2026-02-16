@@ -7,6 +7,14 @@ const confirmButton = document.getElementById("confirm-button");
 const micButton = document.getElementById("mic-button");
 const voiceToggle = document.getElementById("voice-toggle");
 const personaButtons = Array.from(document.querySelectorAll(".persona-button"));
+const onboarding = document.getElementById("onboarding");
+const onboardingTitle = document.getElementById("onboarding-title");
+const onboardingStepLabel = document.getElementById("onboarding-step-label");
+const onboardingProgressBar = document.getElementById("onboarding-progress-bar");
+const onboardingBody = document.getElementById("onboarding-body");
+const onboardingBack = document.getElementById("onboarding-back");
+const onboardingNext = document.getElementById("onboarding-next");
+const onboardingSkip = document.getElementById("onboarding-skip");
 
 const apiBase = window.location.origin;
 let recognition = null;
@@ -18,6 +26,8 @@ let fillerIndex = 0;
 
 let personaPresets = {};
 let activePersona = "max";
+let onboardingStep = 0;
+let onboardingCompleted = false;
 
 let fillerPhrases = [
   "Working on it.",
@@ -32,6 +42,12 @@ const applyPersona = (persona) => {
   if (Array.isArray(persona.filler_phrases) && persona.filler_phrases.length > 0) {
     fillerPhrases = persona.filler_phrases;
   }
+};
+
+const setVoiceEnabled = (enabled) => {
+  voiceEnabled = Boolean(enabled);
+  voiceToggle.dataset.state = voiceEnabled ? "on" : "off";
+  voiceToggle.textContent = voiceEnabled ? "On" : "Off";
 };
 
 const setActivePersona = (key) => {
@@ -89,6 +105,13 @@ const addMessage = (role, text) => {
   conversation.scrollTop = conversation.scrollHeight;
 };
 
+const setOnboardingFeedback = (text) => {
+  const feedback = onboardingBody.querySelector("#onboarding-feedback");
+  if (feedback) {
+    feedback.textContent = text || "";
+  }
+};
+
 const speak = (text) => {
   if (!voiceEnabled || !window.speechSynthesis) return;
   const utter = new SpeechSynthesisUtterance(text);
@@ -128,6 +151,175 @@ const startFiller = () => {
       fillerIndex += 1;
     }, 9000);
   }, 2000);
+};
+
+const onboardingSteps = [
+  {
+    title: "Welcome to AI Distro",
+    stepLabel: "Step 1 of 5",
+    nextLabel: "Next",
+    body: `
+      <h2>Talk naturally. I handle the rest.</h2>
+      <p>This shell is your command center for voice and manual control. We’ll set voice preferences and run your first command.</p>
+    `,
+  },
+  {
+    title: "Voice Playback",
+    stepLabel: "Step 2 of 5",
+    nextLabel: "Next",
+    body: `
+      <h2>Choose spoken replies</h2>
+      <p>Enable voice replies if you want the assistant to speak status and results aloud.</p>
+      <div class="onboarding-buttons">
+        <button class="ghost" type="button" data-ob-voice-toggle>Toggle Voice Replies</button>
+      </div>
+      <div id="onboarding-feedback" class="onboarding-note"></div>
+    `,
+    onRender: () => {
+      const toggle = onboardingBody.querySelector("[data-ob-voice-toggle]");
+      if (!toggle) return;
+      toggle.addEventListener("click", () => {
+        setVoiceEnabled(!voiceEnabled);
+        setOnboardingFeedback(`Voice replies are ${voiceEnabled ? "on" : "off"}.`);
+      });
+      setOnboardingFeedback(`Voice replies are currently ${voiceEnabled ? "on" : "off"}.`);
+    },
+  },
+  {
+    title: "Assistant Persona",
+    stepLabel: "Step 3 of 5",
+    nextLabel: "Next",
+    body: `
+      <h2>Pick your tone</h2>
+      <p>Choose how the assistant sounds. You can change this any time from the side panel.</p>
+      <div class="onboarding-buttons">
+        <button class="ghost" type="button" data-ob-persona="max">Use Max</button>
+        <button class="ghost" type="button" data-ob-persona="alfred">Use Alfred</button>
+      </div>
+      <div id="onboarding-feedback" class="onboarding-note"></div>
+    `,
+    onRender: () => {
+      const personaChoiceButtons = Array.from(onboardingBody.querySelectorAll("[data-ob-persona]"));
+      personaChoiceButtons.forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const key = btn.dataset.obPersona;
+          if (!key) return;
+          setActivePersona(key);
+          const ok = await persistPersona(key);
+          if (ok) {
+            setOnboardingFeedback(`Persona set to ${key}.`);
+            refreshPersona();
+          } else {
+            setOnboardingFeedback("Persona was updated locally only.");
+          }
+        });
+      });
+      setOnboardingFeedback(`Current persona: ${activePersona}.`);
+    },
+  },
+  {
+    title: "Safety Checks",
+    stepLabel: "Step 4 of 5",
+    nextLabel: "Next",
+    body: `
+      <h2>Risky actions always require confirmation</h2>
+      <p>Before any dangerous action, the assistant pauses and asks for explicit confirmation. You stay in control.</p>
+      <div class="onboarding-note">Example: reboot, shutdown, and package changes may ask to confirm first.</div>
+    `,
+  },
+  {
+    title: "Run a First Command",
+    stepLabel: "Step 5 of 5",
+    nextLabel: "Finish",
+    body: `
+      <h2>Try one now</h2>
+      <p>Pick a sample command or type your own in the input field at the bottom.</p>
+      <div class="onboarding-buttons">
+        <button class="ghost" type="button" data-ob-command="what can you do">What can you do</button>
+        <button class="ghost" type="button" data-ob-command="open firefox">Open Firefox</button>
+        <button class="ghost" type="button" data-ob-command="set volume to 40 percent">Set volume to 40%</button>
+      </div>
+      <div id="onboarding-feedback" class="onboarding-note"></div>
+    `,
+    onRender: () => {
+      const sampleButtons = Array.from(onboardingBody.querySelectorAll("[data-ob-command]"));
+      sampleButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const command = btn.dataset.obCommand;
+          if (!command) return;
+          sendCommand(command);
+          setOnboardingFeedback(`Sent: "${command}"`);
+        });
+      });
+      setOnboardingFeedback("When you are ready, click Finish.");
+    },
+  },
+];
+
+const renderOnboardingStep = () => {
+  const step = onboardingSteps[onboardingStep];
+  if (!step) return;
+  onboardingTitle.textContent = step.title;
+  onboardingStepLabel.textContent = step.stepLabel;
+  onboardingProgressBar.style.width = `${((onboardingStep + 1) / onboardingSteps.length) * 100}%`;
+  onboardingBody.innerHTML = step.body;
+  onboardingBack.classList.toggle("hidden", onboardingStep === 0);
+  onboardingNext.textContent = step.nextLabel;
+  if (typeof step.onRender === "function") {
+    step.onRender();
+  }
+};
+
+const fetchOnboardingState = async () => {
+  try {
+    const res = await fetch(`${apiBase}/api/onboarding`);
+    if (!res.ok) return {};
+    const payload = await res.json();
+    return payload.state || {};
+  } catch (err) {
+    return {};
+  }
+};
+
+const persistOnboardingState = async (state) => {
+  try {
+    await fetch(`${apiBase}/api/onboarding`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state }),
+    });
+  } catch (err) {
+    // ignore
+  }
+};
+
+const completeOnboarding = async (skipped) => {
+  onboardingCompleted = true;
+  const state = {
+    version: 1,
+    completed: true,
+    skipped: Boolean(skipped),
+    completed_at: new Date().toISOString(),
+  };
+  localStorage.setItem("ai_distro_onboarding_v1_completed", "true");
+  localStorage.setItem("ai_distro_onboarding_v1_completed_at", state.completed_at);
+  await persistOnboardingState(state);
+  onboarding.classList.add("hidden");
+  addMessage("assistant", skipped ? "Onboarding skipped. Say the word when you want help." : "Onboarding complete. You are ready.");
+};
+
+const maybeStartOnboarding = async () => {
+  const state = await fetchOnboardingState();
+  const completedLocal = localStorage.getItem("ai_distro_onboarding_v1_completed") === "true";
+  const completedRemote = Boolean(state.completed);
+  onboardingCompleted = completedLocal || completedRemote;
+  if (onboardingCompleted) {
+    onboarding.classList.add("hidden");
+    return;
+  }
+  onboarding.classList.remove("hidden");
+  onboardingStep = 0;
+  renderOnboardingStep();
 };
 
 const sendCommand = async (text) => {
@@ -255,9 +447,26 @@ commandInput.addEventListener("keydown", (event) => {
 });
 
 voiceToggle.addEventListener("click", () => {
-  voiceEnabled = !voiceEnabled;
-  voiceToggle.dataset.state = voiceEnabled ? "on" : "off";
-  voiceToggle.textContent = voiceEnabled ? "On" : "Off";
+  setVoiceEnabled(!voiceEnabled);
+});
+
+onboardingBack.addEventListener("click", () => {
+  if (onboardingStep === 0) return;
+  onboardingStep -= 1;
+  renderOnboardingStep();
+});
+
+onboardingNext.addEventListener("click", async () => {
+  if (onboardingStep < onboardingSteps.length - 1) {
+    onboardingStep += 1;
+    renderOnboardingStep();
+    return;
+  }
+  await completeOnboarding(false);
+});
+
+onboardingSkip.addEventListener("click", async () => {
+  await completeOnboarding(true);
 });
 
 const ping = async () => {
@@ -307,3 +516,4 @@ personaButtons.forEach((btn) => {
 });
 
 loadPersonaPresets();
+maybeStartOnboarding();

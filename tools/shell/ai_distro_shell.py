@@ -10,6 +10,7 @@ DEFAULT_SOCKET = "/run/ai-distro/agent.sock"
 DEFAULT_STATIC = "/usr/share/ai-distro/ui/shell"
 DEFAULT_PERSONA = "/etc/ai-distro/persona.json"
 DEFAULT_PERSONA_ALFRED = "/etc/ai-distro/persona.alfred.json"
+DEFAULT_ONBOARDING = os.path.expanduser("~/.config/ai-distro/shell-onboarding.json")
 
 
 def agent_request(payload: dict, timeout=4.0):
@@ -88,6 +89,26 @@ class ShellHandler(SimpleHTTPRequestHandler):
         except Exception as exc:
             return False, str(exc)
 
+    def _onboarding_path(self):
+        return os.environ.get("AI_DISTRO_ONBOARDING_STATE", DEFAULT_ONBOARDING)
+
+    def _load_onboarding(self):
+        path = self._onboarding_path()
+        if not os.path.exists(path):
+            return {}
+        return self._load_json(path)
+
+    def _write_onboarding(self, state):
+        path = self._onboarding_path()
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump(state, fh, indent=2)
+                fh.write("\n")
+            return True, path
+        except Exception as exc:
+            return False, str(exc)
+
     def translate_path(self, path):
         static_root = os.environ.get("AI_DISTRO_SHELL_STATIC_DIR", DEFAULT_STATIC)
         rel = path.lstrip("/")
@@ -118,6 +139,13 @@ class ShellHandler(SimpleHTTPRequestHandler):
                 payload = {"status": "ok", "presets": self._load_persona_presets()}
                 self.wfile.write(json.dumps(payload).encode("utf-8"))
                 return
+            if self.path == "/api/onboarding":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                payload = {"status": "ok", "state": self._load_onboarding()}
+                self.wfile.write(json.dumps(payload).encode("utf-8"))
+                return
             self.send_error(404, "unknown api")
             return
         super().do_GET()
@@ -139,6 +167,32 @@ class ShellHandler(SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 msg = {"status": "error", "message": f"could not persist persona: {detail}"}
+                self.wfile.write(json.dumps(msg).encode("utf-8"))
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            msg = {"status": "ok", "path": detail}
+            self.wfile.write(json.dumps(msg).encode("utf-8"))
+            return
+        if parsed.path == "/api/onboarding":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw = self.rfile.read(content_length)
+            try:
+                payload = json.loads(raw.decode("utf-8"))
+            except json.JSONDecodeError:
+                self.send_error(400, "invalid json")
+                return
+            state = payload.get("state")
+            if not isinstance(state, dict):
+                self.send_error(400, "state must be object")
+                return
+            ok, detail = self._write_onboarding(state)
+            if not ok:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                msg = {"status": "error", "message": f"could not persist onboarding: {detail}"}
                 self.wfile.write(json.dumps(msg).encode("utf-8"))
                 return
             self.send_response(200)
