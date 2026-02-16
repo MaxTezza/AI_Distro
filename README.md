@@ -47,8 +47,12 @@ Policy controls live in `configs/policy.json`:
 - `open_url_allowed_domains`
 - `open_app_allowed`
 - `list_files_allowed_prefixes`
+- `rate_limit_per_minute_default`
+- `rate_limit_per_minute_overrides`
 
 Increase utility by extending these allowlists, instead of allowing arbitrary command execution.
+
+Agent outcomes are also written to a JSONL audit trail (`AI_DISTRO_AUDIT_LOG`) for incident review and tuning.
 
 ## Docs
 - `docs/VOICE_UX.md`

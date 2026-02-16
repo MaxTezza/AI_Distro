@@ -1,9 +1,13 @@
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
 use std::fs::{self, OpenOptions};
+use std::hash::{Hash, Hasher};
 use std::io::{self, BufRead, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixListener;
+use std::path::Path;
 use std::process::Command;
+use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{thread, time::Duration};
 use ai_distro_common::{
@@ -34,6 +38,7 @@ impl Action {
 }
 
 type Handler = fn(&ActionRequest) -> ActionResponse;
+static RATE_LIMIT_BUCKETS: OnceLock<Mutex<HashMap<String, Vec<u64>>>> = OnceLock::new();
 
 fn action_registry() -> HashMap<&'static str, Handler> {
     let mut map: HashMap<&'static str, Handler> = HashMap::new();
@@ -455,6 +460,49 @@ fn read_recent_notes(limit: usize) -> Result<Vec<String>, String> {
     Ok(notes)
 }
 
+fn audit_log_path() -> String {
+    std::env::var("AI_DISTRO_AUDIT_LOG")
+        .unwrap_or_else(|_| "/var/log/ai-distro-agent/audit.jsonl".to_string())
+}
+
+fn payload_fingerprint(payload: Option<&str>) -> Option<u64> {
+    payload.map(|text| {
+        let mut hasher = DefaultHasher::new();
+        text.hash(&mut hasher);
+        hasher.finish()
+    })
+}
+
+fn audit_action_outcome(request: &ActionRequest, response: &ActionResponse) {
+    let path = audit_log_path();
+    let parent = Path::new(&path).parent();
+    if let Some(dir) = parent {
+        if fs::create_dir_all(dir).is_err() {
+            return;
+        }
+    }
+    let mut file = match OpenOptions::new().create(true).append(true).open(&path) {
+        Ok(f) => f,
+        Err(_) => return,
+    };
+    let event = serde_json::json!({
+        "ts": now_epoch_secs(),
+        "action": request.name,
+        "status": response.status,
+        "message": response.message,
+        "request_version": request.version.unwrap_or(1),
+        "has_confirmation_id": response.confirmation_id.is_some(),
+        "payload_len": request.payload.as_deref().map(|p| p.len()).unwrap_or(0),
+        "payload_hash": payload_fingerprint(request.payload.as_deref()),
+    });
+    let _ = writeln!(file, "{event}");
+}
+
+fn finalize_response(request: &ActionRequest, response: ActionResponse) -> ActionResponse {
+    audit_action_outcome(request, &response);
+    response
+}
+
 fn extract_url_host(url: &str) -> Option<String> {
     let (_, rest) = url.split_once("://")?;
     let host_port = rest.split('/').next()?.trim();
@@ -546,6 +594,42 @@ fn enforce_action_allowlists(
     }
 }
 
+fn rate_limit_for_action(policy: &ai_distro_common::PolicyConfig, action: &str) -> u32 {
+    policy
+        .constraints
+        .rate_limit_per_minute_overrides
+        .get(action)
+        .copied()
+        .unwrap_or(policy.constraints.rate_limit_per_minute_default)
+}
+
+fn enforce_rate_limit(
+    policy: &ai_distro_common::PolicyConfig,
+    request: &ActionRequest,
+) -> Result<(), String> {
+    if request.name == "natural_language" {
+        return Ok(());
+    }
+    let limit = rate_limit_for_action(policy, &request.name);
+    if limit == 0 {
+        return Ok(());
+    }
+    let now = now_epoch_secs();
+    let window_start = now.saturating_sub(60);
+    let buckets = RATE_LIMIT_BUCKETS.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut guard = buckets
+        .lock()
+        .map_err(|_| "rate limiter unavailable".to_string())?;
+    let key = request.name.clone();
+    let bucket = guard.entry(key).or_default();
+    bucket.retain(|ts| *ts >= window_start);
+    if bucket.len() >= limit as usize {
+        return Err(format!("rate limit exceeded for action '{}'", request.name));
+    }
+    bucket.push(now);
+    Ok(())
+}
+
 fn dispatch_action(
     policy: &ai_distro_common::PolicyConfig,
     registry: &HashMap<&'static str, Handler>,
@@ -599,7 +683,9 @@ fn handle_request(
     request: ActionRequest,
 ) -> ActionResponse {
     if request.name == "confirm" {
-        return handle_confirm(policy, registry, request);
+        let req_for_audit = request.clone();
+        let resp = handle_confirm(policy, registry, request);
+        return finalize_response(&req_for_audit, resp);
     }
     if request.name == "natural_language" {
         if let Some(payload) = request.payload.as_deref() {
@@ -609,7 +695,7 @@ fn handle_request(
                 }
             }
         }
-        return ActionResponse {
+        let resp = ActionResponse {
             version: 1,
             action: "natural_language".to_string(),
             status: "error".to_string(),
@@ -617,38 +703,53 @@ fn handle_request(
             capabilities: None,
             confirmation_id: None,
         };
+        return finalize_response(&request, resp);
     }
 
     if request.version.unwrap_or(1) != 1 {
-        return ActionResponse {
+        let resp = ActionResponse {
             version: 1,
-            action: request.name,
+            action: request.name.clone(),
             status: "error".to_string(),
             message: Some("unsupported request version".to_string()),
             capabilities: None,
             confirmation_id: None,
         };
+        return finalize_response(&request, resp);
     }
 
     if let Err(detail) = enforce_action_allowlists(policy, &request) {
-        return ActionResponse {
+        let resp = ActionResponse {
             version: 1,
-            action: request.name,
+            action: request.name.clone(),
             status: "deny".to_string(),
             message: Some(detail),
             capabilities: None,
             confirmation_id: None,
         };
+        return finalize_response(&request, resp);
     }
 
-    match enforce_policy(policy, &request) {
+    if let Err(detail) = enforce_rate_limit(policy, &request) {
+        let resp = ActionResponse {
+            version: 1,
+            action: request.name.clone(),
+            status: "deny".to_string(),
+            message: Some(detail),
+            capabilities: None,
+            confirmation_id: None,
+        };
+        return finalize_response(&request, resp);
+    }
+
+    let response = match enforce_policy(policy, &request) {
         PolicyDecision::Allow => {
             if let Some(handler) = registry.get(request.name.as_str()) {
                 handler(&request)
             } else {
                 ActionResponse {
                     version: 1,
-                    action: request.name,
+                    action: request.name.clone(),
                     status: "error".to_string(),
                     message: Some("no handler registered".to_string()),
                     capabilities: None,
@@ -656,16 +757,17 @@ fn handle_request(
                 }
             }
         }
-        PolicyDecision::RequireConfirmation => queue_confirmation(request),
+        PolicyDecision::RequireConfirmation => queue_confirmation(request.clone()),
         PolicyDecision::Deny => ActionResponse {
             version: 1,
-            action: request.name,
+            action: request.name.clone(),
             status: "deny".to_string(),
             message: Some("action denied by policy".to_string()),
             capabilities: None,
             confirmation_id: None,
         },
-    }
+    };
+    finalize_response(&request, response)
 }
 
 fn run_ipc_loop(
@@ -1062,6 +1164,23 @@ mod tests {
         };
         let denied = enforce_action_allowlists(&policy, &req).is_err();
         assert!(denied);
+    }
+
+    #[test]
+    fn rate_limit_blocks_second_request_when_limit_is_one() {
+        let mut policy = ai_distro_common::PolicyConfig::default();
+        policy
+            .constraints
+            .rate_limit_per_minute_overrides
+            .insert("rate_limit_test_action".to_string(), 1);
+
+        let req = ActionRequest {
+            version: Some(1),
+            name: "rate_limit_test_action".to_string(),
+            payload: None,
+        };
+        assert!(enforce_rate_limit(&policy, &req).is_ok());
+        assert!(enforce_rate_limit(&policy, &req).is_err());
     }
 
     fn temp_confirm_dir() -> PathBuf {

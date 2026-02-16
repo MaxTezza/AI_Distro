@@ -38,3 +38,6 @@
 
 - `AI_DISTRO_PERSONA` (default: `/etc/ai-distro/persona.json`)
   Path to assistant persona configuration.
+
+- `AI_DISTRO_AUDIT_LOG` (default: `/var/log/ai-distro-agent/audit.jsonl`)
+  JSONL audit trail destination for action outcomes (request metadata, decision/result status).

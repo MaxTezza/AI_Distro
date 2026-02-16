@@ -1,4 +1,5 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -99,6 +100,14 @@ pub struct PolicyConstraints {
     pub open_app_allowed: Vec<String>,
     #[serde(default)]
     pub list_files_allowed_prefixes: Vec<String>,
+    #[serde(default = "default_rate_limit_per_minute")]
+    pub rate_limit_per_minute_default: u32,
+    #[serde(default)]
+    pub rate_limit_per_minute_overrides: HashMap<String, u32>,
+}
+
+fn default_rate_limit_per_minute() -> u32 {
+    120
 }
 
 impl Default for PolicyConfig {
@@ -114,6 +123,8 @@ impl Default for PolicyConfig {
                 open_url_allowed_domains: vec![],
                 open_app_allowed: vec![],
                 list_files_allowed_prefixes: vec![],
+                rate_limit_per_minute_default: default_rate_limit_per_minute(),
+                rate_limit_per_minute_overrides: HashMap::new(),
             },
         }
     }
@@ -270,6 +281,8 @@ mod tests {
                 open_url_allowed_domains: vec![],
                 open_app_allowed: vec![],
                 list_files_allowed_prefixes: vec![],
+                rate_limit_per_minute_default: default_rate_limit_per_minute(),
+                rate_limit_per_minute_overrides: HashMap::new(),
             },
         }
     }
@@ -338,7 +351,7 @@ mod tests {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ActionRequest {
     pub version: Option<u32>,
     pub name: String,

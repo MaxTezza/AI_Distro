@@ -37,6 +37,20 @@
     "list_files_allowed_prefixes": [
       "/home",
       "/tmp"
-    ]
+    ],
+    "rate_limit_per_minute_default": 120,
+    "rate_limit_per_minute_overrides": {
+      "package_install": 10,
+      "system_update": 6,
+      "power_reboot": 6,
+      "power_shutdown": 6,
+      "power_sleep": 6,
+      "open_url": 90,
+      "open_app": 90,
+      "list_files": 120,
+      "ping": 240,
+      "get_capabilities": 240,
+      "confirm": 120
+    }
   }
 }
