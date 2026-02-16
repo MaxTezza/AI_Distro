@@ -1,4 +1,4 @@
-.PHONY: build-rust stage-deb package-deb rootfs iso-build iso-assemble iso deps release-iso
+.PHONY: build-rust stage-deb package-deb rootfs iso-build iso-assemble iso deps release-iso qa-voice
 
 build-rust:
 	tools/build/build-rust.sh
@@ -29,3 +29,9 @@ deps:
 	tools/build/deps.sh
 
 release-iso: deps build-rust package-deb rootfs iso-build iso-assemble
+
+qa-voice:
+	python3 tools/dev/test_intent_parser.py
+	python3 tools/dev/voice_acceptance.py
+	python3 tools/dev/agent_voice_top20_check.py
+	cargo test --manifest-path src/rust/Cargo.toml
