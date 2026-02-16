@@ -41,3 +41,9 @@
 
 - `AI_DISTRO_AUDIT_LOG` (default: `/var/log/ai-distro-agent/audit.jsonl`)
   JSONL audit trail destination for action outcomes (request metadata, decision/result status).
+
+- `AI_DISTRO_AUDIT_STATE` (default: `${AI_DISTRO_AUDIT_LOG}.state`)
+  Path for persisted hash-chain state (`seq`, `last_hash`) used to verify continuity across restarts.
+
+- `AI_DISTRO_AUDIT_ROTATE_BYTES` (default: `5242880`)
+  Rotate audit log when it reaches this size (bytes); a hash-chained rotation anchor is written into the new file.

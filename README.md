@@ -53,6 +53,7 @@ Policy controls live in `configs/policy.json`:
 Increase utility by extending these allowlists, instead of allowing arbitrary command execution.
 
 Agent outcomes are also written to a JSONL audit trail (`AI_DISTRO_AUDIT_LOG`) for incident review and tuning.
+Audit entries are hash-chained and survive rotation (`AI_DISTRO_AUDIT_ROTATE_BYTES`) with continuity anchors.
 
 ## Docs
 - `docs/VOICE_UX.md`

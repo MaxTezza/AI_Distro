@@ -39,6 +39,13 @@ impl Action {
 
 type Handler = fn(&ActionRequest) -> ActionResponse;
 static RATE_LIMIT_BUCKETS: OnceLock<Mutex<HashMap<String, Vec<u64>>>> = OnceLock::new();
+static AUDIT_CHAIN_STATE: OnceLock<Mutex<Option<AuditChainState>>> = OnceLock::new();
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct AuditChainState {
+    seq: u64,
+    last_hash: String,
+}
 
 fn action_registry() -> HashMap<&'static str, Handler> {
     let mut map: HashMap<&'static str, Handler> = HashMap::new();
@@ -465,6 +472,18 @@ fn audit_log_path() -> String {
         .unwrap_or_else(|_| "/var/log/ai-distro-agent/audit.jsonl".to_string())
 }
 
+fn audit_state_path() -> String {
+    std::env::var("AI_DISTRO_AUDIT_STATE")
+        .unwrap_or_else(|_| format!("{}.state", audit_log_path()))
+}
+
+fn audit_rotate_bytes() -> u64 {
+    std::env::var("AI_DISTRO_AUDIT_ROTATE_BYTES")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(5 * 1024 * 1024)
+}
+
 fn payload_fingerprint(payload: Option<&str>) -> Option<u64> {
     payload.map(|text| {
         let mut hasher = DefaultHasher::new();
@@ -473,20 +492,125 @@ fn payload_fingerprint(payload: Option<&str>) -> Option<u64> {
     })
 }
 
+fn fnv1a64_hex(input: &[u8]) -> String {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for b in input {
+        hash ^= *b as u64;
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("{hash:016x}")
+}
+
+fn compute_chain_hash(seq: u64, prev_hash: &str, event_json: &str) -> String {
+    let chain_input = format!("{seq}|{prev_hash}|{event_json}");
+    fnv1a64_hex(chain_input.as_bytes())
+}
+
+fn load_audit_chain_state(path: &str) -> AuditChainState {
+    if let Ok(contents) = fs::read_to_string(path) {
+        if let Ok(state) = serde_json::from_str::<AuditChainState>(&contents) {
+            return state;
+        }
+    }
+    AuditChainState {
+        seq: 0,
+        last_hash: "genesis".to_string(),
+    }
+}
+
+fn persist_audit_chain_state(path: &str, state: &AuditChainState) {
+    if let Some(dir) = Path::new(path).parent() {
+        if fs::create_dir_all(dir).is_err() {
+            return;
+        }
+    }
+    if let Ok(payload) = serde_json::to_string(state) {
+        let _ = fs::write(path, payload);
+    }
+}
+
+fn append_audit_record(path: &str, state: &mut AuditChainState, mut event: serde_json::Value) -> io::Result<()> {
+    let next_seq = state.seq.saturating_add(1);
+    let prev_hash = state.last_hash.clone();
+    {
+        let event_obj = event
+            .as_object_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "audit event must be object"))?;
+        event_obj.insert("seq".to_string(), serde_json::json!(next_seq));
+        event_obj.insert("prev_hash".to_string(), serde_json::json!(prev_hash));
+    }
+
+    let event_json = serde_json::to_string(&event)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("audit serialize: {e}")))?;
+    let chain_hash = compute_chain_hash(next_seq, &state.last_hash, &event_json);
+
+    {
+        let event_obj = event
+            .as_object_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "audit event must be object"))?;
+        event_obj.insert("chain_hash".to_string(), serde_json::json!(chain_hash.clone()));
+    }
+    let final_line = serde_json::to_string(&event)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("audit serialize: {e}")))?;
+
+    let mut file = OpenOptions::new().create(true).append(true).open(path)?;
+    writeln!(file, "{final_line}")?;
+
+    state.seq = next_seq;
+    state.last_hash = chain_hash;
+    Ok(())
+}
+
+fn maybe_rotate_audit_log(path: &str, state: &mut AuditChainState) {
+    let rotate_bytes = audit_rotate_bytes();
+    if rotate_bytes == 0 {
+        return;
+    }
+    let metadata = match fs::metadata(path) {
+        Ok(m) => m,
+        Err(_) => return,
+    };
+    if metadata.len() < rotate_bytes {
+        return;
+    }
+    let rotated_path = format!("{path}.{}.jsonl", now_epoch_secs());
+    if fs::rename(path, &rotated_path).is_err() {
+        return;
+    }
+    let anchor = serde_json::json!({
+        "ts": now_epoch_secs(),
+        "type": "rotation_anchor",
+        "rotated_file": rotated_path,
+    });
+    let _ = append_audit_record(path, state, anchor);
+}
+
 fn audit_action_outcome(request: &ActionRequest, response: &ActionResponse) {
     let path = audit_log_path();
+    let state_path = audit_state_path();
     let parent = Path::new(&path).parent();
     if let Some(dir) = parent {
         if fs::create_dir_all(dir).is_err() {
             return;
         }
     }
-    let mut file = match OpenOptions::new().create(true).append(true).open(&path) {
-        Ok(f) => f,
+    let lock = AUDIT_CHAIN_STATE.get_or_init(|| Mutex::new(None));
+    let mut guard = match lock.lock() {
+        Ok(g) => g,
         Err(_) => return,
     };
+    if guard.is_none() {
+        *guard = Some(load_audit_chain_state(&state_path));
+    }
+    let state = match guard.as_mut() {
+        Some(s) => s,
+        None => return,
+    };
+
+    maybe_rotate_audit_log(&path, state);
     let event = serde_json::json!({
         "ts": now_epoch_secs(),
+        "type": "action_outcome",
         "action": request.name,
         "status": response.status,
         "message": response.message,
@@ -495,7 +619,9 @@ fn audit_action_outcome(request: &ActionRequest, response: &ActionResponse) {
         "payload_len": request.payload.as_deref().map(|p| p.len()).unwrap_or(0),
         "payload_hash": payload_fingerprint(request.payload.as_deref()),
     });
-    let _ = writeln!(file, "{event}");
+    if append_audit_record(&path, state, event).is_ok() {
+        persist_audit_chain_state(&state_path, state);
+    }
 }
 
 fn finalize_response(request: &ActionRequest, response: ActionResponse) -> ActionResponse {
@@ -1181,6 +1307,38 @@ mod tests {
         };
         assert!(enforce_rate_limit(&policy, &req).is_ok());
         assert!(enforce_rate_limit(&policy, &req).is_err());
+    }
+
+    #[test]
+    fn chain_hash_is_deterministic() {
+        let event = r#"{"action":"ping","status":"ok"}"#;
+        let a = compute_chain_hash(1, "genesis", event);
+        let b = compute_chain_hash(1, "genesis", event);
+        let c = compute_chain_hash(2, "genesis", event);
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+    }
+
+    #[test]
+    fn append_audit_record_advances_chain_state() {
+        let mut dir = std::env::temp_dir();
+        dir.push(format!("ai-distro-audit-{}", now_epoch_secs()));
+        let _ = fs::create_dir_all(&dir);
+        let path = dir.join("audit.jsonl");
+        let mut state = AuditChainState {
+            seq: 0,
+            last_hash: "genesis".to_string(),
+        };
+        let event = serde_json::json!({
+            "ts": now_epoch_secs(),
+            "type": "action_outcome",
+            "action": "ping",
+            "status": "ok"
+        });
+        let ok = append_audit_record(path.to_string_lossy().as_ref(), &mut state, event).is_ok();
+        assert!(ok);
+        assert_eq!(state.seq, 1);
+        assert_ne!(state.last_hash, "genesis");
     }
 
     fn temp_confirm_dir() -> PathBuf {
