@@ -1,0 +1,22 @@
+[
+  {"utterance": "open firefox", "name": "open_app", "payload": "firefox"},
+  {"utterance": "go to docs.openai.com", "name": "open_url", "payload": "https://docs.openai.com"},
+  {"utterance": "check my gmail", "name": "open_url", "payload": "https://mail.google.com/"},
+  {"utterance": "search for weather in austin", "name": "open_url", "payload": "https://www.google.com/search?q=weather+in+austin"},
+  {"utterance": "set volume to 40 percent", "name": "set_volume", "payload": "40"},
+  {"utterance": "set brightness to 60 percent", "name": "set_brightness", "payload": "60"},
+  {"utterance": "turn on wifi", "name": "network_wifi_on"},
+  {"utterance": "turn off wifi", "name": "network_wifi_off"},
+  {"utterance": "turn on bluetooth", "name": "network_bluetooth_on"},
+  {"utterance": "turn off bluetooth", "name": "network_bluetooth_off"},
+  {"utterance": "list files in home", "name": "list_files", "payload": "__HOME__"},
+  {"utterance": "list files in downloads", "name": "list_files", "payload": "__HOME__/Downloads"},
+  {"utterance": "remember that my printer is upstairs", "name": "remember", "payload": "my printer is upstairs"},
+  {"utterance": "what do you remember", "name": "read_context", "payload": "default"},
+  {"utterance": "show my notes", "name": "read_context", "payload": "default"},
+  {"utterance": "update the system", "name": "system_update", "payload": "stable"},
+  {"utterance": "install vim and curl", "name": "package_install", "payload": "vim,curl"},
+  {"utterance": "restart the computer", "name": "power_reboot"},
+  {"utterance": "what can you do", "name": "get_capabilities"},
+  {"utterance": "are you there", "name": "ping"}
+]

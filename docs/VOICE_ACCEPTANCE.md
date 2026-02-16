@@ -17,17 +17,20 @@ Run:
 cd /home/jmt3/AI_Distro
 python3 tools/dev/test_intent_parser.py
 python3 tools/dev/voice_acceptance.py
+python3 tools/dev/agent_voice_top20_check.py
 ```
 
 Expected:
 
 - `test_intent_parser.py` prints `ok`
 - `voice_acceptance.py` returns `Result: X/Y (...)`
+- `agent_voice_top20_check.py` validates the packaged parser behavior
 - Release target is `100%` pass for current acceptance file
 
 Acceptance cases live in:
 
 - `tests/voice_acceptance_cases.json`
+- `tests/agent_voice_top20_cases.json`
 
 ## Manual End-to-End Check (Real Voice)
 

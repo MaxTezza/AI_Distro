@@ -6,6 +6,7 @@ import sys
 import urllib.parse
 
 DEFAULT_MAP = "/etc/ai-distro/intent-map.json"
+HOME_DIR = os.environ.get("HOME", "/home/casper")
 
 
 def load_intent_map():
@@ -28,6 +29,27 @@ def normalize(text):
     return re.sub(r"\s+", " ", text.strip().lower())
 
 
+def resolve_user_path(raw):
+    path = raw.strip().strip("\"'")
+    if path in ("", ".", "here"):
+        return "."
+    if path in ("home", "my home", "~"):
+        return HOME_DIR
+    aliases = {
+        "desktop": "Desktop",
+        "documents": "Documents",
+        "downloads": "Downloads",
+        "music": "Music",
+        "pictures": "Pictures",
+        "videos": "Videos",
+    }
+    if path in aliases:
+        return os.path.join(HOME_DIR, aliases[path])
+    if path.startswith("~/"):
+        return os.path.join(HOME_DIR, path[2:])
+    return path
+
+
 def parse_install(text):
     match = re.search(r"\binstall\b(.+)", text)
     if not match:
@@ -45,14 +67,44 @@ def parse_percent(text, keyword):
     return match.group(1)
 
 
+def parse_list_files(text):
+    match = re.search(r"\b(list|show)\s+(my\s+)?files(?:\s+(in|from)\s+(.+))?$", text)
+    if match:
+        raw_path = (match.group(4) or "home").strip()
+        return resolve_user_path(raw_path)
+
+    match = re.search(r"\bwhat files are in\s+(.+)$", text)
+    if match:
+        return resolve_user_path(match.group(1))
+
+    return None
+
+
+def parse_read_context(text):
+    prompts = (
+        "what do you remember",
+        "what did i ask you to remember",
+        "show my notes",
+        "recall my notes",
+        "read my context",
+    )
+    if text in prompts:
+        return "default"
+    return None
+
+
 def parse_url(text):
     if re.search(r"\b(gmail|g-mail|g mail)\b", text):
         return "https://mail.google.com/"
     match = re.search(r"\b(go to|open|visit)\b\s+(.+)$", text)
     if not match:
         return None
+    verb = match.group(1)
     dest = match.group(2).strip()
     if " " in dest:
+        return None
+    # "open firefox" should map to open_app, not URL.
+    if verb == "open" and not re.search(r"[./:]", dest):
         return None
     if not re.match(r"^https?://", dest):
         dest = "https://" + dest
@@ -84,7 +136,7 @@ def parse_open_app(text):
 
 
 def parse_remember(text):
-    match = re.search(r"\bremember\b\s+that\s+(.+)$", text)
+    match = re.search(r"\bremember\b(?:\s+that)?\s+(.+)$", text)
     if not match:
         return None
     return match.group(1).strip()
@@ -98,8 +150,21 @@ def main():
     raw = " ".join(sys.argv[1:])
     text = normalize(raw)
 
+    if text in ("help", "what can you do", "what can i say", "show commands"):
+        print(json.dumps(to_action("get_capabilities")))
+        return
+
+    if text in ("are you there", "hello", "hello assistant", "ping"):
+        print(json.dumps(to_action("ping")))
+        return
+
     if "check my gmail" in text or "open gmail" in text:
         print(json.dumps(to_action("open_url", "https://mail.google.com/")))
+        return
+
+    read_context = parse_read_context(text)
+    if read_context:
+        print(json.dumps(to_action("read_context", read_context)))
         return
 
     remember = parse_remember(text)
@@ -107,16 +172,24 @@ def main():
         print(json.dumps(to_action("remember", remember)))
         return
 
+    files_path = parse_list_files(text)
+    if files_path:
+        print(json.dumps(to_action("list_files", files_path)))
+        return
+
     if "wifi" in text and "on" in text:
         print(json.dumps(to_action("network_wifi_on")))
         return
-    if "wifi" in text and "off" in text:
+    if "wifi" in text and ("off" in text or "disable" in text):
         print(json.dumps(to_action("network_wifi_off")))
         return
-    if "bluetooth" in text and "on" in text:
+    if "wifi" in text and "enable" in text:
+        print(json.dumps(to_action("network_wifi_on")))
+        return
+    if "bluetooth" in text and ("on" in text or "enable" in text):
         print(json.dumps(to_action("network_bluetooth_on")))
         return
-    if "bluetooth" in text and "off" in text:
+    if "bluetooth" in text and ("off" in text or "disable" in text):
         print(json.dumps(to_action("network_bluetooth_off")))
         return
 
@@ -139,7 +212,7 @@ def main():
         print(json.dumps(to_action("set_brightness", brightness)))
         return
 
-    if "update" in text and "system" in text:
+    if "update" in text or "upgrade" in text:
         print(json.dumps(to_action("system_update", "stable")))
         return
 
@@ -167,12 +240,8 @@ def main():
     intent_map = load_intent_map()
     for name, entry in intent_map.items():
         for example in entry.get("examples", []):
-            if normalize(example) in text:
-                payload_key = entry.get("payload")
-                if payload_key:
-                    print(json.dumps(to_action(name, text)))
-                else:
-                    print(json.dumps(to_action(name)))
+            if normalize(example) == text:
+                print(json.dumps(to_action(name)))
                 return
 
     print(json.dumps(to_action("unknown", raw)))

@@ -67,6 +67,39 @@
     ],
     "payload": "app"
   },
+  "list_files": {
+    "examples": [
+      "list files in home",
+      "show my files in downloads"
+    ],
+    "payload": "path"
+  },
+  "remember": {
+    "examples": [
+      "remember that my printer is upstairs",
+      "remember my wifi password hint"
+    ],
+    "payload": "note"
+  },
+  "read_context": {
+    "examples": [
+      "what do you remember",
+      "show my notes"
+    ],
+    "payload": "scope"
+  },
+  "get_capabilities": {
+    "examples": [
+      "what can you do",
+      "show commands"
+    ]
+  },
+  "ping": {
+    "examples": [
+      "are you there",
+      "hello assistant"
+    ]
+  },
   "network_bluetooth_on": {
     "examples": [
       "turn on bluetooth",
