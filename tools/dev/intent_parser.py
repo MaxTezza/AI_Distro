@@ -44,6 +44,23 @@ def parse_intent(text: str, mapping: dict):
         payload = "tomorrow" if "tomorrow" in text_n else "today"
         return "plan_day_outfit", payload
 
+    if (
+        text_n.startswith("weather ")
+        or text_n.startswith("forecast ")
+        or text_n.startswith("what is the weather")
+    ):
+        payload = "tomorrow" if "tomorrow" in text_n else "today"
+        return "weather_get", payload
+
+    if "calendar" in text_n and ("what is on" in text_n or "list" in text_n):
+        payload = "tomorrow" if "tomorrow" in text_n else "today"
+        return "calendar_list_day", payload
+
+    if text_n.startswith("add calendar event") or text_n.startswith("schedule "):
+        payload = extract_payload("calendar_add_event", text_n)
+        if payload:
+            return "calendar_add_event", payload
+
     url_payload = extract_payload("open_url", text_n)
     if url_payload:
         return "open_url", url_payload
@@ -146,6 +163,26 @@ def extract_payload(intent: str, text_n: str):
         return m.group(1) if m else None
     if intent == "plan_day_outfit":
         return "tomorrow" if "tomorrow" in text_n else "today"
+    if intent == "weather_get":
+        return "tomorrow" if "tomorrow" in text_n else "today"
+    if intent == "calendar_list_day":
+        return "tomorrow" if "tomorrow" in text_n else "today"
+    if intent == "calendar_add_event":
+        m = re.search(r"\b(?:add calendar event|schedule)\b\s+(today|tomorrow)?\s*(?:at\s+([0-9:apm\s]+))?\s+(.+)$", text_n)
+        if not m:
+            return None
+        day = (m.group(1) or "today").strip()
+        when = (m.group(2) or "09:00").strip()
+        title = (m.group(3) or "").strip()
+        if not title:
+            return None
+        dress = "casual"
+        if any(k in title for k in ("meeting", "office", "client", "work")):
+            dress = "business"
+        if any(k in title for k in ("interview", "wedding", "formal", "ceremony")):
+            dress = "formal"
+        outdoor = "true" if any(k in title for k in ("walk", "run", "hike", "outdoor", "park")) else "false"
+        return f"{day}|{when}|{title}|{dress}|{outdoor}"
     if intent == "system_update":
         return "stable"
     return None

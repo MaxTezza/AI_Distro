@@ -95,6 +95,27 @@
     ],
     "payload": "day"
   },
+  "weather_get": {
+    "examples": [
+      "weather today",
+      "forecast tomorrow"
+    ],
+    "payload": "day"
+  },
+  "calendar_list_day": {
+    "examples": [
+      "what is on my calendar today",
+      "list calendar events tomorrow"
+    ],
+    "payload": "day"
+  },
+  "calendar_add_event": {
+    "examples": [
+      "add calendar event tomorrow at 3pm dentist appointment",
+      "schedule today at 14:30 team meeting"
+    ],
+    "payload": "event"
+  },
   "get_capabilities": {
     "examples": [
       "what can you do",

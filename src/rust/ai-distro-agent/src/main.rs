@@ -67,6 +67,9 @@ fn action_registry() -> HashMap<&'static str, Handler> {
     map.insert("power_sleep", handle_power_sleep as Handler);
     map.insert("remember", handle_remember as Handler);
     map.insert("list_files", handle_list_files as Handler);
+    map.insert("weather_get", handle_weather_get as Handler);
+    map.insert("calendar_add_event", handle_calendar_add_event as Handler);
+    map.insert("calendar_list_day", handle_calendar_list_day as Handler);
     map.insert("plan_day_outfit", handle_plan_day_outfit as Handler);
     map.insert("unknown", handle_unknown as Handler);
     map
@@ -171,6 +174,9 @@ fn handle_get_capabilities(req: &ActionRequest) -> ActionResponse {
                 "power_sleep".to_string(),
                 "remember".to_string(),
                 "list_files".to_string(),
+                "weather_get".to_string(),
+                "calendar_add_event".to_string(),
+                "calendar_list_day".to_string(),
                 "plan_day_outfit".to_string(),
             ],
             protocol_version: 1,
@@ -347,6 +353,89 @@ fn handle_plan_day_outfit(req: &ActionRequest) -> ActionResponse {
             )
         }
         Err(err) => error_response(&req.name, &format!("planner failed: {err}")),
+    }
+}
+
+fn handle_weather_get(req: &ActionRequest) -> ActionResponse {
+    let payload = req.payload.as_deref().unwrap_or("today");
+    let tool = std::env::var("AI_DISTRO_WEATHER_TOOL")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/weather_tool.py".to_string());
+    match Command::new("python3").arg(tool).arg(payload).output() {
+        Ok(out) if out.status.success() => {
+            let msg = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if msg.is_empty() {
+                ok_response(&req.name, "Weather unavailable.")
+            } else {
+                ok_response(&req.name, &msg)
+            }
+        }
+        Ok(out) => error_response(
+            &req.name,
+            &format!(
+                "weather tool failed: {}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ),
+        ),
+        Err(err) => error_response(&req.name, &format!("weather tool launch failed: {err}")),
+    }
+}
+
+fn handle_calendar_add_event(req: &ActionRequest) -> ActionResponse {
+    let Some(payload) = req.payload.as_deref() else {
+        return error_response(&req.name, "missing calendar payload");
+    };
+    let tool = std::env::var("AI_DISTRO_CALENDAR_TOOL")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/calendar_tool.py".to_string());
+    match Command::new("python3")
+        .arg(tool)
+        .arg("add")
+        .arg(payload)
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            let msg = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            ok_response(&req.name, if msg.is_empty() { "Calendar event added." } else { &msg })
+        }
+        Ok(out) => error_response(
+            &req.name,
+            &format!(
+                "calendar add failed: {}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ),
+        ),
+        Err(err) => error_response(&req.name, &format!("calendar tool launch failed: {err}")),
+    }
+}
+
+fn handle_calendar_list_day(req: &ActionRequest) -> ActionResponse {
+    let payload = req.payload.as_deref().unwrap_or("today");
+    let tool = std::env::var("AI_DISTRO_CALENDAR_TOOL")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/calendar_tool.py".to_string());
+    match Command::new("python3")
+        .arg(tool)
+        .arg("list")
+        .arg(payload)
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            let msg = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            ok_response(
+                &req.name,
+                if msg.is_empty() {
+                    "No events found."
+                } else {
+                    &msg
+                },
+            )
+        }
+        Ok(out) => error_response(
+            &req.name,
+            &format!(
+                "calendar list failed: {}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ),
+        ),
+        Err(err) => error_response(&req.name, &format!("calendar tool launch failed: {err}")),
     }
 }
 

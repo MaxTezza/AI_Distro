@@ -16,6 +16,12 @@
 - `AI_DISTRO_DAY_PLANNER` (default: `/usr/lib/ai-distro/day_planner.py`)
   Helper script for weather + calendar clothing recommendations (`plan_day_outfit`).
 
+- `AI_DISTRO_WEATHER_TOOL` (default: `/usr/lib/ai-distro/weather_tool.py`)
+  Helper script for direct forecast requests (`weather_get`).
+
+- `AI_DISTRO_CALENDAR_TOOL` (default: `/usr/lib/ai-distro/calendar_tool.py`)
+  Helper script for local calendar add/list requests (`calendar_add_event`, `calendar_list_day`).
+
 - `AI_DISTRO_GOOGLE_CALENDAR_OAUTH_FILE` (default: `~/.config/ai-distro/google-calendar-oauth.json`)
   OAuth config for Google Calendar integration (`client_id`, `client_secret`, `refresh_token`, `calendar_id`).
 

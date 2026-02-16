@@ -59,6 +59,9 @@ Audit entries are hash-chained and survive rotation (`AI_DISTRO_AUDIT_ROTATE_BYT
 Say:
 - `what should i wear today`
 - `what should i wear tomorrow`
+- `weather today`
+- `what is on my calendar today`
+- `add calendar event tomorrow at 3pm dentist appointment`
 
 This uses weather forecast + local calendar events from:
 - `AI_DISTRO_CALENDAR_EVENTS_FILE` (default: `~/.config/ai-distro/calendar-events.json`)

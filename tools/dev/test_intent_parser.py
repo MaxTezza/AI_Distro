@@ -58,6 +58,16 @@ def test_plan_day_outfit():
     assert res["intent"] == "plan_day_outfit"
     assert res["payload"] == "today"
 
+def test_weather_get():
+    res = run("weather tomorrow")
+    assert res["intent"] == "weather_get"
+    assert res["payload"] == "tomorrow"
+
+def test_calendar_list_day():
+    res = run("what is on my calendar today")
+    assert res["intent"] == "calendar_list_day"
+    assert res["payload"] == "today"
+
 
 if __name__ == "__main__":
     test_install_multiple()
@@ -68,4 +78,6 @@ if __name__ == "__main__":
     test_remember()
     test_list_files()
     test_plan_day_outfit()
+    test_weather_get()
+    test_calendar_list_day()
     print("ok")

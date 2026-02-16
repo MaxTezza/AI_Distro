@@ -167,6 +167,58 @@ def parse_outfit_planner(text):
     return None
 
 
+def parse_weather(text):
+    prompts = (
+        "what is the weather",
+        "weather today",
+        "weather tomorrow",
+        "forecast today",
+        "forecast tomorrow",
+    )
+    if text in prompts:
+        return "tomorrow" if "tomorrow" in text else "today"
+    if text.startswith("weather ") or text.startswith("forecast "):
+        return "tomorrow" if "tomorrow" in text else "today"
+    if text.startswith("what is the weather"):
+        return "tomorrow" if "tomorrow" in text else "today"
+    return None
+
+
+def parse_calendar_list(text):
+    prompts = (
+        "what is on my calendar",
+        "what is on my calendar today",
+        "what is on my calendar tomorrow",
+        "list calendar events",
+        "list calendar events today",
+        "list calendar events tomorrow",
+    )
+    if text in prompts or "calendar" in text and ("what is on" in text or "list" in text):
+        return "tomorrow" if "tomorrow" in text else "today"
+    return None
+
+
+def parse_calendar_add(text):
+    # Examples:
+    # "add calendar event tomorrow at 3pm dentist appointment"
+    # "schedule today at 14:30 team sync"
+    m = re.search(r"\b(add|schedule)\b(?:\s+calendar(?:\s+event)?)?\s+(today|tomorrow)?\s*(?:at\s+([0-9:apm\s]+))?\s+(.+)$", text)
+    if not m:
+        return None
+    day = (m.group(2) or "today").strip().lower()
+    time_part = (m.group(3) or "09:00").strip().lower()
+    title = (m.group(4) or "").strip()
+    if not title:
+        return None
+    dress = "casual"
+    if any(k in title.lower() for k in ("meeting", "office", "client", "work")):
+        dress = "business"
+    if any(k in title.lower() for k in ("interview", "wedding", "formal", "ceremony")):
+        dress = "formal"
+    outdoor = "true" if any(k in title.lower() for k in ("walk", "run", "hike", "outdoor", "park")) else "false"
+    return f"{day}|{time_part}|{title}|{dress}|{outdoor}"
+
+
 def main():
     if len(sys.argv) < 2:
         print(json.dumps(to_action("unknown", "")))
@@ -200,6 +252,21 @@ def main():
     outfit = parse_outfit_planner(text)
     if outfit:
         print(json.dumps(to_action("plan_day_outfit", outfit)))
+        return
+
+    weather = parse_weather(text)
+    if weather:
+        print(json.dumps(to_action("weather_get", weather)))
+        return
+
+    calendar_add = parse_calendar_add(text)
+    if calendar_add:
+        print(json.dumps(to_action("calendar_add_event", calendar_add)))
+        return
+
+    calendar_list = parse_calendar_list(text)
+    if calendar_list:
+        print(json.dumps(to_action("calendar_list_day", calendar_list)))
         return
 
     files_path = parse_list_files(text)
