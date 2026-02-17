@@ -161,9 +161,21 @@ fn handle_system_update(req: &ActionRequest) -> ActionResponse {
     log::info!("handler: system_update, payload={:?}", req.payload);
     let env = Some(&[("DEBIAN_FRONTEND", "noninteractive")][..]);
     if let Err(err) = run_command("apt-get", &["update"], env) {
+        if err.contains("Permission denied") || err.contains("Unable to lock directory") {
+            return error_response(
+                &req.name,
+                "I need administrator permission to update system packages. Please confirm the action in the privileged agent session.",
+            );
+        }
         return error_response(&req.name, &err);
     }
     if let Err(err) = run_command("apt-get", &["upgrade", "-y"], env) {
+        if err.contains("Permission denied") || err.contains("Unable to acquire the dpkg frontend lock") {
+            return error_response(
+                &req.name,
+                "I need administrator permission to apply updates. Please confirm the action in the privileged agent session.",
+            );
+        }
         return error_response(&req.name, &err);
     }
     if command_exists("flatpak") {
@@ -872,15 +884,33 @@ fn resolve_remove_source(query: &str) -> Result<PackageSource, String> {
 fn install_package_with_best_source(query: &str) -> Result<String, String> {
     match resolve_install_source(query)? {
         PackageSource::Flatpak(app_id) => {
-            run_command("flatpak", &["install", "-y", "flathub", &app_id], None)?;
+            let install_attempt = run_command("flatpak", &["install", "-y", "flathub", &app_id], None);
+            if let Err(err) = install_attempt {
+                if err.contains("exists in multiple installations") {
+                    if run_command("flatpak", &["install", "-y", "--user", "flathub", &app_id], None).is_ok()
+                        || run_command("flatpak", &["install", "-y", "--system", "flathub", &app_id], None).is_ok()
+                    {
+                        return Ok(format!("{query} via flatpak ({app_id})"));
+                    }
+                }
+                return Err(err);
+            }
             Ok(format!("{query} via flatpak ({app_id})"))
         }
         PackageSource::Apt(pkg) => {
-            run_command(
+            if let Err(err) = run_command(
                 "apt-get",
                 &["install", "-y", &pkg],
                 Some(&[("DEBIAN_FRONTEND", "noninteractive")]),
-            )?;
+            ) {
+                if err.contains("Permission denied") || err.contains("are you root?") {
+                    return Err(
+                        "I need administrator permission to install that app. Please confirm the action in the privileged agent session."
+                            .to_string(),
+                    );
+                }
+                return Err(err);
+            }
             Ok(format!("{query} via apt ({pkg})"))
         }
     }
@@ -889,15 +919,33 @@ fn install_package_with_best_source(query: &str) -> Result<String, String> {
 fn remove_package_with_best_source(query: &str) -> Result<String, String> {
     match resolve_remove_source(query)? {
         PackageSource::Flatpak(app_id) => {
-            run_command("flatpak", &["uninstall", "-y", &app_id], None)?;
+            let uninstall_attempt = run_command("flatpak", &["uninstall", "-y", &app_id], None);
+            if let Err(err) = uninstall_attempt {
+                if err.contains("exists in multiple installations") {
+                    if run_command("flatpak", &["uninstall", "-y", "--user", &app_id], None).is_ok()
+                        || run_command("flatpak", &["uninstall", "-y", "--system", &app_id], None).is_ok()
+                    {
+                        return Ok(format!("{query} via flatpak ({app_id})"));
+                    }
+                }
+                return Err(err);
+            }
             Ok(format!("{query} via flatpak ({app_id})"))
         }
         PackageSource::Apt(pkg) => {
-            run_command(
+            if let Err(err) = run_command(
                 "apt-get",
                 &["remove", "-y", &pkg],
                 Some(&[("DEBIAN_FRONTEND", "noninteractive")]),
-            )?;
+            ) {
+                if err.contains("Permission denied") || err.contains("are you root?") {
+                    return Err(
+                        "I need administrator permission to remove that app. Please confirm the action in the privileged agent session."
+                            .to_string(),
+                    );
+                }
+                return Err(err);
+            }
             Ok(format!("{query} via apt ({pkg})"))
         }
     }
