@@ -78,6 +78,11 @@ def test_email_search():
     assert res["intent"] == "email_search"
     assert res["payload"] == "invoice"
 
+def test_email_draft():
+    res = run("draft email to alex@example.com about project update")
+    assert res["intent"] == "email_draft"
+    assert res["payload"].startswith("alex@example.com|project update|")
+
 
 if __name__ == "__main__":
     test_install_multiple()
@@ -92,4 +97,5 @@ if __name__ == "__main__":
     test_calendar_list_day()
     test_email_summary()
     test_email_search()
+    test_email_draft()
     print("ok")

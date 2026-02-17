@@ -6,7 +6,7 @@ import urllib.parse
 import urllib.request
 
 DEFAULT_REDIRECT_URI = "http://127.0.0.1:53682/callback"
-DEFAULT_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
+DEFAULT_SCOPE = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose"
 
 
 def load_client():
@@ -114,4 +114,3 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -69,6 +69,11 @@ def parse_intent(text: str, mapping: dict):
         if payload:
             return "email_search", payload
 
+    if text_n.startswith("draft email to ") or text_n.startswith("write email to "):
+        payload = extract_payload("email_draft", text_n)
+        if payload:
+            return "email_draft", payload
+
     url_payload = extract_payload("open_url", text_n)
     if url_payload:
         return "open_url", url_payload
@@ -199,6 +204,22 @@ def extract_payload(intent: str, text_n: str):
                 q = text_n[len(prefix):].strip()
                 return q or None
         return None
+    if intent == "email_draft":
+        m = re.search(r"\b(?:draft|write)\s+email\s+to\s+(\S+)\s+about\s+(.+)$", text_n)
+        if not m:
+            return None
+        to = m.group(1).strip().strip(".,")
+        rest = m.group(2).strip()
+        if " body " in rest:
+            subj, body = rest.split(" body ", 1)
+        else:
+            subj = rest
+            body = f"hi,\n\n{rest}\n\nthanks."
+        subj = subj.strip()
+        body = body.strip()
+        if not to or not subj:
+            return None
+        return f"{to}|{subj}|{body}"
     if intent == "system_update":
         return "stable"
     return None

@@ -241,6 +241,27 @@ def parse_email_search(text):
     return None
 
 
+def parse_email_draft(text):
+    # draft email to someone@example.com about subject body text...
+    m = re.search(r"\b(?:draft|write)\s+(?:an\s+)?email\s+to\s+(\S+)\s+about\s+(.+)$", text)
+    if not m:
+        return None
+    to = m.group(1).strip().strip(".,")
+    rest = m.group(2).strip()
+    if not to or not rest:
+        return None
+    if " body " in rest:
+        subj, body = rest.split(" body ", 1)
+    else:
+        subj = rest
+        body = f"Hi,\n\n{rest}\n\nThanks."
+    subj = subj.strip()
+    body = body.strip()
+    if not subj:
+        return None
+    return f"{to}|{subj}|{body}"
+
+
 def main():
     if len(sys.argv) < 2:
         print(json.dumps(to_action("unknown", "")))
@@ -299,6 +320,11 @@ def main():
     email_query = parse_email_search(text)
     if email_query:
         print(json.dumps(to_action("email_search", email_query)))
+        return
+
+    email_draft = parse_email_draft(text)
+    if email_draft:
+        print(json.dumps(to_action("email_draft", email_draft)))
         return
 
     files_path = parse_list_files(text)

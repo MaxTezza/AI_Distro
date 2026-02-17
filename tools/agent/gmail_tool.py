@@ -4,6 +4,7 @@ import os
 import sys
 import urllib.parse
 import urllib.request
+import base64
 
 
 def oauth_config():
@@ -63,6 +64,21 @@ def access_token(cfg):
 
 def gmail_request(token, url):
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    with urllib.request.urlopen(req, timeout=8.0) as resp:
+        return json.loads(resp.read().decode("utf-8", errors="ignore"))
+
+
+def gmail_post(token, url, payload):
+    body = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
     with urllib.request.urlopen(req, timeout=8.0) as resp:
         return json.loads(resp.read().decode("utf-8", errors="ignore"))
 
@@ -128,9 +144,44 @@ def cmd_search(token, query):
     return format_summary(items, f"Email search '{q}'")
 
 
+def parse_draft_payload(raw):
+    parts = [p.strip() for p in (raw or "").split("|")]
+    if len(parts) < 3:
+        return None
+    to = parts[0]
+    subject = parts[1]
+    body = parts[2]
+    if not to or not subject:
+        return None
+    return {"to": to, "subject": subject, "body": body}
+
+
+def cmd_draft(token, payload_raw):
+    payload = parse_draft_payload(payload_raw)
+    if not payload:
+        return "Invalid draft payload."
+    mime = (
+        f"To: {payload['to']}\r\n"
+        f"Subject: {payload['subject']}\r\n"
+        "Content-Type: text/plain; charset=utf-8\r\n"
+        "\r\n"
+        f"{payload['body']}\r\n"
+    )
+    raw = base64.urlsafe_b64encode(mime.encode("utf-8")).decode("ascii").rstrip("=")
+    out = gmail_post(
+        token,
+        "https://gmail.googleapis.com/gmail/v1/users/me/drafts",
+        {"message": {"raw": raw}},
+    )
+    draft_id = str(out.get("id", "")).strip()
+    if draft_id:
+        return f"Draft created for {payload['to']} with subject '{payload['subject']}'."
+    return "Draft created."
+
+
 def main():
     if len(sys.argv) < 2:
-        print("usage: gmail_tool.py summary|search [query]")
+        print("usage: gmail_tool.py summary|search|draft [query|payload]")
         return 2
     cfg = oauth_config()
     if not cfg:
@@ -154,6 +205,9 @@ def main():
         if cmd == "search":
             print(cmd_search(token, query))
             return 0
+        if cmd == "draft":
+            print(cmd_draft(token, query))
+            return 0
     except Exception:
         print("Gmail request failed.")
         return 0
@@ -163,4 +217,3 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

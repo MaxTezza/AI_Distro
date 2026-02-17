@@ -72,6 +72,7 @@ fn action_registry() -> HashMap<&'static str, Handler> {
     map.insert("calendar_list_day", handle_calendar_list_day as Handler);
     map.insert("email_inbox_summary", handle_email_inbox_summary as Handler);
     map.insert("email_search", handle_email_search as Handler);
+    map.insert("email_draft", handle_email_draft as Handler);
     map.insert("plan_day_outfit", handle_plan_day_outfit as Handler);
     map.insert("unknown", handle_unknown as Handler);
     map
@@ -181,6 +182,7 @@ fn handle_get_capabilities(req: &ActionRequest) -> ActionResponse {
                 "calendar_list_day".to_string(),
                 "email_inbox_summary".to_string(),
                 "email_search".to_string(),
+                "email_draft".to_string(),
                 "plan_day_outfit".to_string(),
             ],
             protocol_version: 1,
@@ -500,6 +502,40 @@ fn handle_email_search(req: &ActionRequest) -> ActionResponse {
             &req.name,
             &format!(
                 "gmail search failed: {}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            ),
+        ),
+        Err(err) => error_response(&req.name, &format!("gmail tool launch failed: {err}")),
+    }
+}
+
+fn handle_email_draft(req: &ActionRequest) -> ActionResponse {
+    let Some(payload) = req.payload.as_deref() else {
+        return error_response(&req.name, "missing draft payload");
+    };
+    let tool = std::env::var("AI_DISTRO_GMAIL_TOOL")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/gmail_tool.py".to_string());
+    match Command::new("python3")
+        .arg(tool)
+        .arg("draft")
+        .arg(payload)
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            let msg = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            ok_response(
+                &req.name,
+                if msg.is_empty() {
+                    "Draft created."
+                } else {
+                    &msg
+                },
+            )
+        }
+        Ok(out) => error_response(
+            &req.name,
+            &format!(
+                "gmail draft failed: {}",
                 String::from_utf8_lossy(&out.stderr).trim()
             ),
         ),

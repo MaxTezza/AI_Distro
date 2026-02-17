@@ -130,6 +130,13 @@
     ],
     "payload": "query"
   },
+  "email_draft": {
+    "examples": [
+      "draft email to alex@example.com about project update",
+      "write email to sam@example.com about meeting notes body please review attached summary"
+    ],
+    "payload": "draft"
+  },
   "get_capabilities": {
     "examples": [
       "what can you do",

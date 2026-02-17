@@ -9,6 +9,7 @@
       "power_shutdown",
       "power_sleep",
       "calendar_add_event",
+      "email_draft",
       "delete_files",
       "network_exfiltration"
     ],
@@ -54,6 +55,7 @@
       "calendar_add_event": 60,
       "email_inbox_summary": 90,
       "email_search": 90,
+      "email_draft": 45,
       "plan_day_outfit": 60,
       "ping": 240,
       "get_capabilities": 240,

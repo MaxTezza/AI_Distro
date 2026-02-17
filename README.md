@@ -64,6 +64,7 @@ Say:
 - `add calendar event tomorrow at 3pm dentist appointment`
 - `summarize my email`
 - `search my email for invoice`
+- `draft email to alex@example.com about project update`
 
 This uses weather forecast + local calendar events from:
 - `AI_DISTRO_CALENDAR_EVENTS_FILE` (default: `~/.config/ai-distro/calendar-events.json`)
@@ -84,7 +85,7 @@ Gmail (optional, read-only):
   - Authorize in browser, copy `code` from redirect URL
   - `python3 tools/agent/google_gmail_oauth.py exchange "<code>"`
 - This writes `~/.config/ai-distro/google-gmail-oauth.json`
-- Then use `summarize my email` and `search my email for <query>`.
+- Then use `summarize my email`, `search my email for <query>`, and `draft email to <address> about <subject>`.
 
 Example file:
 
