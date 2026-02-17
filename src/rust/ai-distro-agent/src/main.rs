@@ -111,9 +111,6 @@ fn handle_package_install(req: &ActionRequest) -> ActionResponse {
     if packages.len() > 20 {
         return error_response(&req.name, "too many packages requested");
     }
-    if packages.iter().any(|pkg| !is_valid_package_name(pkg)) {
-        return error_response(&req.name, "invalid package name");
-    }
     let mut installed = Vec::new();
     for pkg in &packages {
         match install_package_with_best_source(pkg) {
@@ -142,9 +139,6 @@ fn handle_package_remove(req: &ActionRequest) -> ActionResponse {
     }
     if packages.len() > 20 {
         return error_response(&req.name, "too many packages requested");
-    }
-    if packages.iter().any(|pkg| !is_valid_package_name(pkg)) {
-        return error_response(&req.name, "invalid package name");
     }
     let mut removed = Vec::new();
     for pkg in &packages {
@@ -673,78 +667,240 @@ fn is_valid_flatpak_app_id(app_id: &str) -> bool {
         .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-')
 }
 
-fn first_non_empty_line(out: &str) -> Option<&str> {
-    out.lines().map(|l| l.trim()).find(|l| !l.is_empty())
+#[derive(Clone, Copy)]
+struct KnownApp {
+    apt: Option<&'static str>,
+    flatpak: &'static [&'static str],
 }
 
-fn flatpak_search_remote_app(query: &str) -> Option<String> {
+enum PackageSource {
+    Apt(String),
+    Flatpak(String),
+}
+
+fn normalize_app_query(query: &str) -> String {
+    query
+        .to_ascii_lowercase()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn known_app(query: &str) -> Option<KnownApp> {
+    match normalize_app_query(query).as_str() {
+        "discord" => Some(KnownApp {
+            apt: Some("discord"),
+            flatpak: &["com.discordapp.Discord"],
+        }),
+        "google chrome" | "chrome" => Some(KnownApp {
+            apt: None,
+            flatpak: &["com.google.Chrome"],
+        }),
+        "firefox" => Some(KnownApp {
+            apt: Some("firefox"),
+            flatpak: &["org.mozilla.firefox"],
+        }),
+        "vlc" => Some(KnownApp {
+            apt: Some("vlc"),
+            flatpak: &["org.videolan.VLC"],
+        }),
+        "spotify" => Some(KnownApp {
+            apt: Some("spotify-client"),
+            flatpak: &["com.spotify.Client"],
+        }),
+        "slack" => Some(KnownApp {
+            apt: None,
+            flatpak: &["com.slack.Slack"],
+        }),
+        "visual studio code" | "vscode" | "code" => Some(KnownApp {
+            apt: Some("code"),
+            flatpak: &["com.visualstudio.code"],
+        }),
+        _ => None,
+    }
+}
+
+fn clarify_message(query: &str, candidates: &[String]) -> String {
+    let opts = candidates
+        .iter()
+        .take(3)
+        .map(|s| format!("'{s}'"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("I found multiple app matches for '{query}'. Did you mean {opts}?")
+}
+
+fn flatpak_search_remote_apps(query: &str, max_results: usize) -> Vec<String> {
     if !command_exists("flatpak") {
-        return None;
+        return Vec::new();
     }
     let out = run_command(
         "flatpak",
         &["search", "--app", "--columns=application", "-q", query],
         None,
     )
-    .ok()?;
-    let line = first_non_empty_line(&out)?;
-    if is_valid_flatpak_app_id(line) {
-        Some(line.to_string())
-    } else {
-        None
-    }
+    .unwrap_or_default();
+    out.lines()
+        .map(|l| l.trim())
+        .filter(|l| is_valid_flatpak_app_id(l))
+        .take(max_results)
+        .map(|s| s.to_string())
+        .collect()
 }
 
-fn flatpak_find_installed_app(query: &str) -> Option<String> {
+fn flatpak_find_installed_candidates(query: &str, max_results: usize) -> Vec<String> {
     if !command_exists("flatpak") {
-        return None;
+        return Vec::new();
     }
-    if is_valid_flatpak_app_id(query) {
-        return Some(query.to_string());
-    }
-    let out = run_command("flatpak", &["list", "--app", "--columns=application"], None).ok()?;
-    let needle = query.to_ascii_lowercase();
+    let out = run_command("flatpak", &["list", "--app", "--columns=application"], None)
+        .unwrap_or_default();
+    let q = normalize_app_query(query);
+    let mut out_ids = Vec::new();
     for line in out.lines() {
         let app_id = line.trim();
         if !is_valid_flatpak_app_id(app_id) {
             continue;
         }
         let app_l = app_id.to_ascii_lowercase();
-        if app_l == needle {
-            return Some(app_id.to_string());
-        }
         let tail = app_l.rsplit('.').next().unwrap_or("");
-        if tail == needle {
-            return Some(app_id.to_string());
+        if app_l == q || tail == q || app_l.contains(&q.replace(' ', "")) || app_l.contains(&q) {
+            out_ids.push(app_id.to_string());
+        }
+        if out_ids.len() >= max_results {
+            break;
         }
     }
-    None
+    out_ids
 }
 
-fn install_package_with_best_source(pkg: &str) -> Result<String, String> {
-    if let Some(app_id) = flatpak_search_remote_app(pkg) {
-        run_command("flatpak", &["install", "-y", "flathub", &app_id], None)?;
-        return Ok(format!("{pkg} via flatpak ({app_id})"));
+fn apt_search_name_candidates(query: &str, max_results: usize) -> Vec<String> {
+    if !command_exists("apt-cache") {
+        return Vec::new();
     }
-    run_command(
-        "apt-get",
-        &["install", "-y", pkg],
-        Some(&[("DEBIAN_FRONTEND", "noninteractive")]),
-    )?;
-    Ok(format!("{pkg} via apt"))
+    let out = run_command("apt-cache", &["search", "--names-only", query], None).unwrap_or_default();
+    let mut out_pkgs = Vec::new();
+    for line in out.lines() {
+        let head = line.split(" - ").next().unwrap_or("").trim();
+        if is_valid_package_name(head) {
+            out_pkgs.push(head.to_string());
+        }
+        if out_pkgs.len() >= max_results {
+            break;
+        }
+    }
+    out_pkgs
 }
 
-fn remove_package_with_best_source(pkg: &str) -> Result<String, String> {
-    if let Some(app_id) = flatpak_find_installed_app(pkg) {
-        run_command("flatpak", &["uninstall", "-y", &app_id], None)?;
-        return Ok(format!("{pkg} via flatpak ({app_id})"));
+fn resolve_install_source(query: &str) -> Result<PackageSource, String> {
+    let q = normalize_app_query(query);
+    if q.is_empty() {
+        return Err("I need an app name to install.".to_string());
     }
-    run_command(
-        "apt-get",
-        &["remove", "-y", pkg],
-        Some(&[("DEBIAN_FRONTEND", "noninteractive")]),
-    )?;
-    Ok(format!("{pkg} via apt"))
+    if let Some(k) = known_app(&q) {
+        if command_exists("flatpak") {
+            for app_id in k.flatpak {
+                if is_valid_flatpak_app_id(app_id) {
+                    return Ok(PackageSource::Flatpak(app_id.to_string()));
+                }
+            }
+        }
+        if let Some(apt_pkg) = k.apt {
+            if is_valid_package_name(apt_pkg) {
+                return Ok(PackageSource::Apt(apt_pkg.to_string()));
+            }
+        }
+    }
+    let flatpak_candidates = flatpak_search_remote_apps(&q, 3);
+    if flatpak_candidates.len() == 1 {
+        return Ok(PackageSource::Flatpak(flatpak_candidates[0].clone()));
+    }
+    if flatpak_candidates.len() > 1 {
+        return Err(clarify_message(&q, &flatpak_candidates));
+    }
+
+    let apt_candidates = apt_search_name_candidates(&q, 3);
+    if apt_candidates.len() == 1 {
+        return Ok(PackageSource::Apt(apt_candidates[0].clone()));
+    }
+    if apt_candidates.len() > 1 {
+        return Err(clarify_message(&q, &apt_candidates));
+    }
+    if is_valid_package_name(&q) {
+        return Ok(PackageSource::Apt(q.to_string()));
+    }
+    Err(format!("I couldn't find a package match for '{query}' yet."))
+}
+
+fn resolve_remove_source(query: &str) -> Result<PackageSource, String> {
+    let q = normalize_app_query(query);
+    if q.is_empty() {
+        return Err("I need an app name to remove.".to_string());
+    }
+    if let Some(k) = known_app(&q) {
+        let installed_flatpaks = flatpak_find_installed_candidates(&q, 5);
+        for known_id in k.flatpak {
+            if installed_flatpaks.iter().any(|x| x == known_id) {
+                return Ok(PackageSource::Flatpak(known_id.to_string()));
+            }
+        }
+        if let Some(apt_pkg) = k.apt {
+            if is_valid_package_name(apt_pkg) {
+                return Ok(PackageSource::Apt(apt_pkg.to_string()));
+            }
+        }
+    }
+    let installed_flatpaks = flatpak_find_installed_candidates(&q, 3);
+    if installed_flatpaks.len() == 1 {
+        return Ok(PackageSource::Flatpak(installed_flatpaks[0].clone()));
+    }
+    if installed_flatpaks.len() > 1 {
+        return Err(clarify_message(&q, &installed_flatpaks));
+    }
+    let apt_candidates = apt_search_name_candidates(&q, 3);
+    if apt_candidates.len() == 1 {
+        return Ok(PackageSource::Apt(apt_candidates[0].clone()));
+    }
+    if apt_candidates.len() > 1 {
+        return Err(clarify_message(&q, &apt_candidates));
+    }
+    if is_valid_package_name(&q) {
+        return Ok(PackageSource::Apt(q.to_string()));
+    }
+    Err(format!("I couldn't find an installed app match for '{query}' yet."))
+}
+
+fn install_package_with_best_source(query: &str) -> Result<String, String> {
+    match resolve_install_source(query)? {
+        PackageSource::Flatpak(app_id) => {
+            run_command("flatpak", &["install", "-y", "flathub", &app_id], None)?;
+            Ok(format!("{query} via flatpak ({app_id})"))
+        }
+        PackageSource::Apt(pkg) => {
+            run_command(
+                "apt-get",
+                &["install", "-y", &pkg],
+                Some(&[("DEBIAN_FRONTEND", "noninteractive")]),
+            )?;
+            Ok(format!("{query} via apt ({pkg})"))
+        }
+    }
+}
+
+fn remove_package_with_best_source(query: &str) -> Result<String, String> {
+    match resolve_remove_source(query)? {
+        PackageSource::Flatpak(app_id) => {
+            run_command("flatpak", &["uninstall", "-y", &app_id], None)?;
+            Ok(format!("{query} via flatpak ({app_id})"))
+        }
+        PackageSource::Apt(pkg) => {
+            run_command(
+                "apt-get",
+                &["remove", "-y", &pkg],
+                Some(&[("DEBIAN_FRONTEND", "noninteractive")]),
+            )?;
+            Ok(format!("{query} via apt ({pkg})"))
+        }
+    }
 }
 
 fn is_valid_app_name(app: &str) -> bool {

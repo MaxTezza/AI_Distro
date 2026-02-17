@@ -169,23 +169,12 @@ def extract_payload(intent: str, text_n: str):
         parts = text_n.split(" ", 1)
         if len(parts) < 2:
             return None
-        raw = parts[1]
-        # support "vim and curl", "vim, curl", "vim curl"
-        raw = raw.replace(",", " ")
-        raw = raw.replace(" and ", " ")
-        skip = {"app", "apps", "application", "applications", "package", "packages", "the"}
-        pkgs = [p for p in raw.split(" ") if p and p not in skip]
-        return ",".join(pkgs) if pkgs else None
+        return parse_package_targets(parts[1])
     if intent == "package_remove":
         parts = text_n.split(" ", 1)
         if len(parts) < 2:
             return None
-        raw = parts[1]
-        raw = raw.replace(",", " ")
-        raw = raw.replace(" and ", " ")
-        skip = {"app", "apps", "application", "applications", "package", "packages", "the"}
-        pkgs = [p for p in raw.split(" ") if p and p not in skip]
-        return ",".join(pkgs) if pkgs else None
+        return parse_package_targets(parts[1])
     if intent in ("set_volume", "set_brightness"):
         m = re.search(r"(\d+)", text_n)
         return m.group(1) if m else None
@@ -238,6 +227,27 @@ def extract_payload(intent: str, text_n: str):
     if intent == "system_update":
         return "stable"
     return None
+
+
+def parse_package_targets(raw_text: str):
+    raw = (raw_text or "").strip().lower()
+    if not raw:
+        return None
+    raw = re.sub(r"\bplease\b", " ", raw)
+    parts = re.split(r"\s*(?:,|\band\b)\s*", raw)
+    out = []
+    for part in parts:
+        p = re.sub(r"\s+", " ", (part or "").strip())
+        if not p:
+            continue
+        p = re.sub(r"^(?:the|an|a)\s+", "", p)
+        p = re.sub(r"\b(?:app|apps|application|applications|package|packages)\b", " ", p)
+        p = re.sub(r"\s+", " ", p).strip()
+        if p:
+            out.append(p)
+    if not out:
+        return None
+    return ",".join(out)
 
 
 def main():

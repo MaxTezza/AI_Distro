@@ -54,22 +54,35 @@ def parse_install(text):
     match = re.search(r"\binstall\b(.+)", text)
     if not match:
         return None
-    pkgs = match.group(1)
-    pkgs = re.sub(r"\b(and|,|please)\b", " ", pkgs)
-    skip = {"app", "apps", "application", "applications", "package", "packages", "the"}
-    pkgs = ",".join([p for p in pkgs.split() if p and p not in skip])
-    return pkgs if pkgs else None
+    return parse_package_targets(match.group(1))
 
 
 def parse_remove(text):
     match = re.search(r"\b(?:remove|uninstall|delete)\b(.+)", text)
     if not match:
         return None
-    pkgs = match.group(1)
-    pkgs = re.sub(r"\b(and|,|please)\b", " ", pkgs)
-    skip = {"app", "apps", "application", "applications", "package", "packages", "the"}
-    pkgs = ",".join([p for p in pkgs.split() if p and p not in skip])
-    return pkgs if pkgs else None
+    return parse_package_targets(match.group(1))
+
+
+def parse_package_targets(raw_text):
+    raw = (raw_text or "").strip().lower()
+    if not raw:
+        return None
+    raw = re.sub(r"\bplease\b", " ", raw)
+    parts = re.split(r"\s*(?:,|\band\b)\s*", raw)
+    out = []
+    for part in parts:
+        p = re.sub(r"\s+", " ", (part or "").strip())
+        if not p:
+            continue
+        p = re.sub(r"^(?:the|an|a)\s+", "", p)
+        p = re.sub(r"\b(?:app|apps|application|applications|package|packages)\b", " ", p)
+        p = re.sub(r"\s+", " ", p).strip()
+        if p:
+            out.append(p)
+    if not out:
+        return None
+    return ",".join(out)
 
 
 def parse_percent(text, keyword):

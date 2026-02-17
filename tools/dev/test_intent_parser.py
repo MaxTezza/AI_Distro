@@ -19,6 +19,12 @@ def test_install_multiple():
     assert res["payload"] == "vim,curl"
 
 
+def test_install_multiword_app():
+    res = run("install the google chrome app")
+    assert res["intent"] == "package_install"
+    assert res["payload"] == "google chrome"
+
+
 def test_update():
     res = run("update the system")
     assert res["intent"] == "system_update"
@@ -98,6 +104,7 @@ def test_email_draft():
 
 if __name__ == "__main__":
     test_install_multiple()
+    test_install_multiword_app()
     test_update()
     test_update_apps_natural()
     test_remove_app()
