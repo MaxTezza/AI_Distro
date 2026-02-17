@@ -2,8 +2,11 @@
 import json
 import os
 import socket
+import subprocess
 import time
 from http.server import SimpleHTTPRequestHandler, HTTPServer
+from pathlib import Path
+import re
 from urllib.parse import urlparse
 
 DEFAULT_SOCKET = "/run/ai-distro/agent.sock"
@@ -47,6 +50,16 @@ class ShellHandler(SimpleHTTPRequestHandler):
         if os.path.exists(candidate):
             return candidate
         return None
+
+    def _agent_tool_path(self, filename):
+        packaged = Path("/usr/lib/ai-distro") / filename
+        if packaged.exists():
+            return str(packaged)
+        here = Path(__file__).resolve().parent
+        repo_tool = here.parent / "agent" / filename
+        if repo_tool.exists():
+            return str(repo_tool)
+        return str(packaged)
 
     def _load_persona(self):
         path = os.environ.get("AI_DISTRO_PERSONA", DEFAULT_PERSONA)
@@ -146,6 +159,169 @@ class ShellHandler(SimpleHTTPRequestHandler):
         except Exception as exc:
             return False, str(exc)
 
+    def _extract_url(self, text):
+        m = re.search(r"https://[^\s]+", text or "")
+        return m.group(0) if m else ""
+
+    def _provider_env(self, provider, payload):
+        env = os.environ.copy()
+        client_id = str(payload.get("client_id", "")).strip()
+        client_secret = str(payload.get("client_secret", "")).strip()
+        if provider in ("google", "gmail"):
+            if client_id:
+                env["AI_DISTRO_GOOGLE_CLIENT_ID"] = client_id
+            if client_secret:
+                env["AI_DISTRO_GOOGLE_CLIENT_SECRET"] = client_secret
+        if provider in ("microsoft", "outlook"):
+            if client_id:
+                env["AI_DISTRO_MICROSOFT_CLIENT_ID"] = client_id
+            if client_secret:
+                env["AI_DISTRO_MICROSOFT_CLIENT_SECRET"] = client_secret
+        return env
+
+    def _oauth_start(self, target, provider, payload):
+        env = self._provider_env(provider, payload)
+        if target == "calendar" and provider == "google":
+            tool = self._agent_tool_path("google_calendar_oauth.py")
+            proc = subprocess.run(
+                ["python3", tool, "auth-url"],
+                text=True,
+                capture_output=True,
+                env=env,
+                timeout=20,
+            )
+        elif target == "calendar" and provider == "microsoft":
+            tool = self._agent_tool_path("microsoft_outlook_oauth.py")
+            env["AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE"] = (
+                "offline_access https://graph.microsoft.com/Calendars.ReadWrite"
+            )
+            proc = subprocess.run(
+                ["python3", tool, "auth-url"],
+                text=True,
+                capture_output=True,
+                env=env,
+                timeout=20,
+            )
+        elif target == "email" and provider == "gmail":
+            tool = self._agent_tool_path("google_gmail_oauth.py")
+            proc = subprocess.run(
+                ["python3", tool, "auth-url"],
+                text=True,
+                capture_output=True,
+                env=env,
+                timeout=20,
+            )
+        elif target == "email" and provider == "outlook":
+            tool = self._agent_tool_path("microsoft_outlook_oauth.py")
+            env["AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE"] = (
+                "offline_access https://graph.microsoft.com/Mail.ReadWrite"
+            )
+            proc = subprocess.run(
+                ["python3", tool, "auth-url"],
+                text=True,
+                capture_output=True,
+                env=env,
+                timeout=20,
+            )
+        else:
+            return True, {"status": "ok", "message": "No OAuth needed for this provider."}
+
+        out = (proc.stdout or "").strip()
+        err = (proc.stderr or "").strip()
+        if proc.returncode != 0:
+            return False, {"status": "error", "message": err or out or "OAuth start failed."}
+        url = self._extract_url(out)
+        return True, {
+            "status": "ok",
+            "auth_url": url,
+            "message": "Authorization URL ready. After login, paste the code here and click Finish Connect.",
+            "raw": out,
+        }
+
+    def _oauth_finish(self, target, provider, payload):
+        code = str(payload.get("code", "")).strip()
+        if not code:
+            return False, {"status": "error", "message": "Authorization code is required."}
+        env = self._provider_env(provider, payload)
+        if target == "calendar" and provider == "google":
+            tool = self._agent_tool_path("google_calendar_oauth.py")
+            proc = subprocess.run(
+                ["python3", tool, "exchange", code],
+                text=True,
+                capture_output=True,
+                env=env,
+                timeout=25,
+            )
+        elif target == "calendar" and provider == "microsoft":
+            tool = self._agent_tool_path("microsoft_outlook_oauth.py")
+            env["AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE"] = (
+                "offline_access https://graph.microsoft.com/Calendars.ReadWrite"
+            )
+            proc = subprocess.run(
+                ["python3", tool, "exchange", code],
+                text=True,
+                capture_output=True,
+                env=env,
+                timeout=25,
+            )
+        elif target == "email" and provider == "gmail":
+            tool = self._agent_tool_path("google_gmail_oauth.py")
+            proc = subprocess.run(
+                ["python3", tool, "exchange", code],
+                text=True,
+                capture_output=True,
+                env=env,
+                timeout=25,
+            )
+        elif target == "email" and provider == "outlook":
+            tool = self._agent_tool_path("microsoft_outlook_oauth.py")
+            env["AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE"] = (
+                "offline_access https://graph.microsoft.com/Mail.ReadWrite"
+            )
+            proc = subprocess.run(
+                ["python3", tool, "exchange", code],
+                text=True,
+                capture_output=True,
+                env=env,
+                timeout=25,
+            )
+        else:
+            return True, {"status": "ok", "message": "No OAuth needed for this provider."}
+
+        out = (proc.stdout or "").strip()
+        err = (proc.stderr or "").strip()
+        if proc.returncode != 0:
+            return False, {"status": "error", "message": err or out or "OAuth exchange failed."}
+        return True, {"status": "ok", "message": out or "Provider connected."}
+
+    def _provider_test(self, target, provider):
+        env = os.environ.copy()
+        if target == "calendar":
+            env["AI_DISTRO_CALENDAR_PROVIDER"] = provider
+            tool = self._agent_tool_path("calendar_router.py")
+            proc = subprocess.run(
+                ["python3", tool, "list", "today"],
+                text=True,
+                capture_output=True,
+                env=env,
+                timeout=15,
+            )
+        elif target == "email":
+            env["AI_DISTRO_EMAIL_PROVIDER"] = provider
+            tool = self._agent_tool_path("email_router.py")
+            proc = subprocess.run(
+                ["python3", tool, "summary", "in:inbox newer_than:2d"],
+                text=True,
+                capture_output=True,
+                env=env,
+                timeout=15,
+            )
+        else:
+            return False, "unknown test target"
+        if proc.returncode != 0:
+            return False, (proc.stderr or proc.stdout or "Provider test failed.").strip()
+        return True, (proc.stdout or "Provider test passed.").strip()
+
     def translate_path(self, path):
         static_root = os.environ.get("AI_DISTRO_SHELL_STATIC_DIR", DEFAULT_STATIC)
         rel = path.lstrip("/")
@@ -196,6 +372,64 @@ class ShellHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+        if parsed.path == "/api/provider/connect/start":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw = self.rfile.read(content_length)
+            try:
+                payload = json.loads(raw.decode("utf-8"))
+            except json.JSONDecodeError:
+                self.send_error(400, "invalid json")
+                return
+            target = str(payload.get("target", "")).strip().lower()
+            provider = str(payload.get("provider", "")).strip().lower()
+            if target not in ("calendar", "email"):
+                self.send_error(400, "invalid target")
+                return
+            ok, body = self._oauth_start(target, provider, payload)
+            self.send_response(200 if ok else 500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(body).encode("utf-8"))
+            return
+        if parsed.path == "/api/provider/connect/finish":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw = self.rfile.read(content_length)
+            try:
+                payload = json.loads(raw.decode("utf-8"))
+            except json.JSONDecodeError:
+                self.send_error(400, "invalid json")
+                return
+            target = str(payload.get("target", "")).strip().lower()
+            provider = str(payload.get("provider", "")).strip().lower()
+            if target not in ("calendar", "email"):
+                self.send_error(400, "invalid target")
+                return
+            ok, body = self._oauth_finish(target, provider, payload)
+            self.send_response(200 if ok else 500)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(body).encode("utf-8"))
+            return
+        if parsed.path == "/api/provider/test":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw = self.rfile.read(content_length)
+            try:
+                payload = json.loads(raw.decode("utf-8"))
+            except json.JSONDecodeError:
+                self.send_error(400, "invalid json")
+                return
+            target = str(payload.get("target", "")).strip().lower()
+            provider = str(payload.get("provider", "")).strip().lower()
+            if target not in ("calendar", "email"):
+                self.send_error(400, "invalid target")
+                return
+            ok, message = self._provider_test(target, provider)
+            code = 200 if ok else 500
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "ok" if ok else "error", "message": message}).encode("utf-8"))
+            return
         if parsed.path == "/api/persona/set":
             content_length = int(self.headers.get("Content-Length", "0"))
             raw = self.rfile.read(content_length)

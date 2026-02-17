@@ -10,6 +10,22 @@ const personaButtons = Array.from(document.querySelectorAll(".persona-button"));
 const onboardingRestart = document.getElementById("onboarding-restart");
 const providerCalendar = document.getElementById("provider-calendar");
 const providerEmail = document.getElementById("provider-email");
+const calendarClientIdInput = document.getElementById("calendar-client-id");
+const calendarClientSecretInput = document.getElementById("calendar-client-secret");
+const calendarCodeInput = document.getElementById("calendar-auth-code");
+const calendarConnectStartButton = document.getElementById("calendar-connect-start");
+const calendarConnectFinishButton = document.getElementById("calendar-connect-finish");
+const calendarTestButton = document.getElementById("calendar-test");
+const calendarAuthLink = document.getElementById("calendar-auth-link");
+const calendarSetupNote = document.getElementById("calendar-setup-note");
+const emailClientIdInput = document.getElementById("email-client-id");
+const emailClientSecretInput = document.getElementById("email-client-secret");
+const emailCodeInput = document.getElementById("email-auth-code");
+const emailConnectStartButton = document.getElementById("email-connect-start");
+const emailConnectFinishButton = document.getElementById("email-connect-finish");
+const emailTestButton = document.getElementById("email-test");
+const emailAuthLink = document.getElementById("email-auth-link");
+const emailSetupNote = document.getElementById("email-setup-note");
 const onboarding = document.getElementById("onboarding");
 const onboardingTitle = document.getElementById("onboarding-title");
 const onboardingStepLabel = document.getElementById("onboarding-step-label");
@@ -103,6 +119,136 @@ const refreshPersona = async () => {
 const applyProvidersUI = () => {
   if (providerCalendar) providerCalendar.value = providers.calendar || "local";
   if (providerEmail) providerEmail.value = providers.email || "gmail";
+  refreshProviderSetupUI();
+};
+
+const providerNeedsOAuth = (target, provider) => {
+  if (target === "calendar") return ["google", "microsoft"].includes(provider);
+  if (target === "email") return ["gmail", "outlook"].includes(provider);
+  return false;
+};
+
+const setSetupNote = (target, text) => {
+  const node = target === "calendar" ? calendarSetupNote : emailSetupNote;
+  if (node) node.textContent = text || "";
+};
+
+const getProviderPayload = (target) => {
+  if (target === "calendar") {
+    return {
+      target,
+      provider: providers.calendar,
+      client_id: calendarClientIdInput?.value?.trim() || "",
+      client_secret: calendarClientSecretInput?.value?.trim() || "",
+      code: calendarCodeInput?.value?.trim() || "",
+    };
+  }
+  return {
+    target,
+    provider: providers.email,
+    client_id: emailClientIdInput?.value?.trim() || "",
+    client_secret: emailClientSecretInput?.value?.trim() || "",
+    code: emailCodeInput?.value?.trim() || "",
+  };
+};
+
+const setAuthLink = (target, url) => {
+  const link = target === "calendar" ? calendarAuthLink : emailAuthLink;
+  if (!link) return;
+  if (url) {
+    link.href = url;
+    link.classList.remove("hidden");
+  } else {
+    link.href = "#";
+    link.classList.add("hidden");
+  }
+};
+
+const refreshProviderSetupUI = () => {
+  const calendarNeedsOauth = providerNeedsOAuth("calendar", providers.calendar);
+  if (calendarClientIdInput) calendarClientIdInput.classList.toggle("hidden", !calendarNeedsOauth);
+  if (calendarClientSecretInput) calendarClientSecretInput.classList.toggle("hidden", !calendarNeedsOauth);
+  if (calendarCodeInput) calendarCodeInput.classList.toggle("hidden", !calendarNeedsOauth);
+  if (!calendarNeedsOauth) setAuthLink("calendar", "");
+  if (!calendarNeedsOauth) setSetupNote("calendar", "No account connection needed for local calendar.");
+  if (calendarNeedsOauth) setSetupNote("calendar", "Click Connect, authorize in browser, then paste code and click Finish.");
+
+  const emailNeedsOauth = providerNeedsOAuth("email", providers.email);
+  if (emailClientIdInput) emailClientIdInput.classList.toggle("hidden", !emailNeedsOauth);
+  if (emailClientSecretInput) emailClientSecretInput.classList.toggle("hidden", !emailNeedsOauth);
+  if (emailCodeInput) emailCodeInput.classList.toggle("hidden", !emailNeedsOauth);
+  if (!emailNeedsOauth) setAuthLink("email", "");
+  if (!emailNeedsOauth) setSetupNote("email", "No OAuth needed for IMAP. Use provider credentials in settings.");
+  if (emailNeedsOauth) setSetupNote("email", "Click Connect, authorize in browser, then paste code and click Finish.");
+};
+
+const startProviderConnect = async (target) => {
+  const payload = getProviderPayload(target);
+  setSetupNote(target, "Preparing authorization link...");
+  try {
+    const res = await fetch(`${apiBase}/api/provider/connect/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok || out.status === "error") {
+      setSetupNote(target, out.message || "Couldn't start provider connection.");
+      return;
+    }
+    if (out.auth_url) {
+      setAuthLink(target, out.auth_url);
+      window.open(out.auth_url, "_blank", "noopener");
+    } else {
+      setAuthLink(target, "");
+    }
+    setSetupNote(target, out.message || "Authorization ready.");
+    addMessage("assistant", `${target === "calendar" ? "Calendar" : "Email"} provider connection started.`);
+  } catch (err) {
+    setSetupNote(target, "Couldn't start provider connection.");
+  }
+};
+
+const finishProviderConnect = async (target) => {
+  const payload = getProviderPayload(target);
+  setSetupNote(target, "Finishing connection...");
+  try {
+    const res = await fetch(`${apiBase}/api/provider/connect/finish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok || out.status === "error") {
+      setSetupNote(target, out.message || "Couldn't finish provider connection.");
+      return;
+    }
+    setSetupNote(target, out.message || "Provider connected.");
+    addMessage("assistant", `${target === "calendar" ? "Calendar" : "Email"} provider connected.`);
+  } catch (err) {
+    setSetupNote(target, "Couldn't finish provider connection.");
+  }
+};
+
+const testProviderConnection = async (target) => {
+  const payload = getProviderPayload(target);
+  setSetupNote(target, "Testing provider...");
+  try {
+    const res = await fetch(`${apiBase}/api/provider/test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok || out.status === "error") {
+      setSetupNote(target, out.message || "Provider test failed.");
+      return;
+    }
+    setSetupNote(target, "Connection test passed.");
+    addMessage("assistant", out.message || "Provider test passed.");
+  } catch (err) {
+    setSetupNote(target, "Provider test failed.");
+  }
 };
 
 const persistProviders = async () => {
@@ -563,6 +709,7 @@ if (providerCalendar) {
     if (ok) {
       addMessage("assistant", `Calendar provider set to ${providers.calendar}.`);
     }
+    refreshProviderSetupUI();
   });
 }
 
@@ -573,7 +720,27 @@ if (providerEmail) {
     if (ok) {
       addMessage("assistant", `Email provider set to ${providers.email}.`);
     }
+    refreshProviderSetupUI();
   });
+}
+
+if (calendarConnectStartButton) {
+  calendarConnectStartButton.addEventListener("click", () => startProviderConnect("calendar"));
+}
+if (calendarConnectFinishButton) {
+  calendarConnectFinishButton.addEventListener("click", () => finishProviderConnect("calendar"));
+}
+if (calendarTestButton) {
+  calendarTestButton.addEventListener("click", () => testProviderConnection("calendar"));
+}
+if (emailConnectStartButton) {
+  emailConnectStartButton.addEventListener("click", () => startProviderConnect("email"));
+}
+if (emailConnectFinishButton) {
+  emailConnectFinishButton.addEventListener("click", () => finishProviderConnect("email"));
+}
+if (emailTestButton) {
+  emailTestButton.addEventListener("click", () => testProviderConnection("email"));
 }
 
 const ping = async () => {
@@ -624,4 +791,5 @@ personaButtons.forEach((btn) => {
 
 loadPersonaPresets();
 maybeStartOnboarding();
+refreshProviderSetupUI();
 loadProviders();

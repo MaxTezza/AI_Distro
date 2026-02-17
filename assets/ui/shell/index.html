@@ -61,6 +61,19 @@
                 <option value="microsoft">Microsoft</option>
               </select>
             </div>
+            <div class="provider-setup" id="calendar-setup">
+              <div class="provider-setup-title">Calendar Setup</div>
+              <input id="calendar-client-id" class="provider-input" type="text" placeholder="Client ID (for Google/Microsoft)" />
+              <input id="calendar-client-secret" class="provider-input" type="password" placeholder="Client Secret" />
+              <div class="provider-actions">
+                <button id="calendar-connect-start" class="ghost" type="button">Connect</button>
+                <button id="calendar-connect-finish" class="ghost" type="button">Finish</button>
+                <button id="calendar-test" class="ghost" type="button">Test</button>
+              </div>
+              <input id="calendar-auth-code" class="provider-input" type="text" placeholder="Paste authorization code" />
+              <a id="calendar-auth-link" class="provider-link hidden" href="#" target="_blank" rel="noopener">Open authorization page</a>
+              <div id="calendar-setup-note" class="provider-note"></div>
+            </div>
             <div class="toggle">
               <span>Email Provider</span>
               <select id="provider-email" class="provider-select">
@@ -68,6 +81,19 @@
                 <option value="outlook">Outlook</option>
                 <option value="imap">IMAP</option>
               </select>
+            </div>
+            <div class="provider-setup" id="email-setup">
+              <div class="provider-setup-title">Email Setup</div>
+              <input id="email-client-id" class="provider-input" type="text" placeholder="Client ID (for Gmail/Outlook)" />
+              <input id="email-client-secret" class="provider-input" type="password" placeholder="Client Secret" />
+              <div class="provider-actions">
+                <button id="email-connect-start" class="ghost" type="button">Connect</button>
+                <button id="email-connect-finish" class="ghost" type="button">Finish</button>
+                <button id="email-test" class="ghost" type="button">Test</button>
+              </div>
+              <input id="email-auth-code" class="provider-input" type="text" placeholder="Paste authorization code" />
+              <a id="email-auth-link" class="provider-link hidden" href="#" target="_blank" rel="noopener">Open authorization page</a>
+              <div id="email-setup-note" class="provider-note"></div>
             </div>
           </div>
         </aside>

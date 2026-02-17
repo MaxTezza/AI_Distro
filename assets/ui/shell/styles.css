@@ -187,6 +187,56 @@ body {
   border-radius: 10px;
 }
 
+.provider-setup {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  gap: 8px;
+}
+
+.provider-setup-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.provider-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.provider-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.provider-link {
+  color: var(--accent-2);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.provider-link:hover {
+  text-decoration: underline;
+}
+
+.provider-note {
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .persona-button.active {
   background: rgba(255, 184, 107, 0.16);
   border-color: rgba(255, 184, 107, 0.6);
