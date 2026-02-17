@@ -4,10 +4,66 @@ Voice-first, agentic Linux distro workbench focused on useful day-to-day automat
 
 ## Current Status
 - Bootable ISO pipeline exists.
-- Voice Top 20 command gate is automated and passing.
-- Shell UI includes **Onboarding Wizard v1** with resume/replay support.
+- **Local LLM Brain:** Llama 3.2 1B running locally for natural language understanding (Zero API keys).
+- **Nervous System (Event Bus):** Deep D-Bus integration for proactive alerts (Low battery, Network changes).
+- **Conversational UI:** Modern shell with "thinking" states and proactive messaging.
+- **Asynchronous IPC (Tokio):** Core agent refactored for non-blocking concurrent requests.
+- **Secure Audit Logging:** SHA-256 hash chains for tamper-evident record keeping.
+- **Modularized Core:** Decoupled handlers (package, system, media, etc.) for better maintainability.
+- **Automated Quality Gate:** GitHub Actions CI for build, test, and linting.
+- **Containerized Deployment:** Docker support for easy environment isolation.
+
+### Docker (Headless Agent)
+You can run the AI Distro agent in a container for testing or headless server usage.
+
+**Build:**
+```bash
+docker build -t ai-distro-agent .
+```
+
+**Run:**
+```bash
+docker run -v /tmp:/tmp -e AI_DISTRO_IPC_SOCKET=/tmp/ai-distro.sock ai-distro-agent
+```
+
+## Natural Language Guide
+
+Speak naturally to your assistant. You don't need to memorize commands.
+
+**Try saying:**
+- "I want to browse the web" (opens Firefox)
+- "Play some music" (opens Spotify)
+- "I need to write code" (opens VS Code)
+- "It's too loud" (mutes volume)
+- "Dark mode please" (lowers brightness)
+- "Get me ready for the day" (checks weather, calendar, email)
+- "Lock my computer" (sleep mode)
+
+**Proactive Features:**
+The assistant will reach out when it notices things like your battery getting low or a change in your network connection.
+
+## Architecture
+
+AI Distro follows a hybrid model:
+- **Rust Agent (Core):** Handles async IPC, system events (Nervous System), and security policy.
+- **Python Intelligence (Brain):** Local LLM-based intent parsing and complex reasoning.
+- **Web Shell (Face):** Responsive dashboard for interacting with the assistant.
+
 
 ## Quickstart
+
+### Local Development (Rust Agent)
+```bash
+cd src/rust/ai-distro-agent
+cargo build --release
+AI_DISTRO_IPC_SOCKET=/tmp/ai-distro.sock ./target/release/ai-distro-agent
+```
+
+### Docker
+```bash
+docker build -t ai-distro-agent .
+docker run -e AI_DISTRO_IPC_SOCKET=/tmp/ai-distro.sock ai-distro-agent
+```
 
 Run the quality gate:
 

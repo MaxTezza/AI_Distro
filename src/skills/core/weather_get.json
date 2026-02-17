@@ -1,0 +1,30 @@
+{
+  "name": "weather_get",
+  "display_name": "Weather Assistant",
+  "description": "Checks the current weather and forecast for any city or region.",
+  "category": "utility",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "location": {
+        "type": "string",
+        "description": "The city or region name, e.g., 'Austin' or 'London'."
+      },
+      "day": {
+        "type": "string",
+        "enum": ["today", "tomorrow"],
+        "default": "today"
+      }
+    },
+    "required": ["location"]
+  },
+  "handler": {
+    "type": "python",
+    "path": "tools/agent/weather_tool.py"
+  },
+  "examples": [
+    "What's the weather in Austin?",
+    "Will it rain tomorrow in London?",
+    "Is it cold out?"
+  ]
+}

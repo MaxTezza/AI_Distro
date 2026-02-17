@@ -448,6 +448,22 @@ const loadAppTasks = async () => {
   }
 };
 
+const loadProactiveEvents = async () => {
+  try {
+    const res = await fetch(`${apiBase}/api/proactive-events`);
+    if (!res.ok) return;
+    const payload = await res.json();
+    if (payload.status === "ok" && Array.isArray(payload.events)) {
+      payload.events.forEach((evt) => {
+        addMessage("assistant", evt.message);
+        speak(evt.message);
+      });
+    }
+  } catch (err) {
+    // ignore
+  }
+};
+
 const stopFiller = () => {
   if (fillerTimer) {
     clearTimeout(fillerTimer);
@@ -896,6 +912,7 @@ initVoice();
 ping();
 setInterval(ping, 5000);
 setInterval(loadAppTasks, 7000);
+setInterval(loadProactiveEvents, 3000);
 
 const loadPersonaPresets = async () => {
   try {

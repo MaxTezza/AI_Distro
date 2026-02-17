@@ -51,20 +51,66 @@ def resolve_user_path(raw):
 
 
 def parse_install(text):
-    match = re.search(r"\binstall\b(.+)", text)
+    match = re.search(r"\b(install|get|add|download|setup)\b(.+)", text)
     if not match:
         return None
-    return parse_package_targets(match.group(1))
+    return parse_package_targets(match.group(2))
 
 
 def parse_remove(text):
-    match = re.search(r"\b(?:remove|uninstall|delete)\b(.+)", text)
+    match = re.search(r"\b(?:remove|uninstall|delete|trash)\b(.+)", text)
     if not match:
         return None
     return parse_package_targets(match.group(1))
 
 
+def parse_concept(text):
+    # Maps vague user concepts to specific actionable commands
+    concepts = {
+        "browser": "open_app firefox",
+        "web": "open_app firefox",
+        "internet": "open_app firefox",
+        "chrome": "open_app google-chrome",
+        "editor": "open_app code",
+        "code": "open_app code",
+        "programming": "open_app code",
+        "music": "open_app spotify",
+        "spotify": "open_app spotify",
+        "tunes": "open_app spotify",
+        "chat": "open_app discord",
+        "discord": "open_app discord",
+        "terminal": "open_app gnome-terminal",
+        "console": "open_app gnome-terminal",
+        "files": "open_app nautilus",
+        "folder": "open_app nautilus",
+        "quiet": "set_volume 0",
+        "mute": "set_volume 0",
+        "loud": "set_volume 80",
+        "max volume": "set_volume 100",
+        "dark mode": "set_brightness 30",
+        "light mode": "set_brightness 100",
+        "reboot": "power_reboot",
+        "restart": "power_reboot",
+        "shutdown": "power_shutdown",
+        "turn off": "power_shutdown",
+        "lock": "power_sleep",
+        "sleep": "power_sleep",
+    }
+    
+    # Check for direct concept matches or "open <concept>"
+    for concept, action_str in concepts.items():
+        if concept in text:
+            # Simple heuristic: if the user mentions the concept, they likely want the action.
+            # We split the action string "open_app firefox" -> name="open_app", payload="firefox"
+            parts = action_str.split(" ", 1)
+            name = parts[0]
+            payload = parts[1] if len(parts) > 1 else None
+            return to_action(name, payload)
+    return None
+
+
 def parse_package_targets(raw_text):
+
     raw = (raw_text or "").strip().lower()
     if not raw:
         return None
@@ -419,6 +465,12 @@ def main():
     app = parse_open_app(text)
     if app:
         print(json.dumps(to_action("open_app", app)))
+        return
+        
+    # Check general concepts
+    concept_action = parse_concept(text)
+    if concept_action:
+        print(json.dumps(concept_action))
         return
 
     # Fallback: try intent map examples

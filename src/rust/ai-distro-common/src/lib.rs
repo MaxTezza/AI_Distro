@@ -352,6 +352,23 @@ mod tests {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SkillManifest {
+    pub name: String,
+    pub display_name: String,
+    pub description: String,
+    pub category: String,
+    pub handler: SkillHandler,
+    pub examples: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum SkillHandler {
+    Python { path: String },
+    RustBuiltin { name: String },
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ActionRequest {
     pub version: Option<u32>,
     pub name: String,

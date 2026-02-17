@@ -1,0 +1,29 @@
+{
+  "name": "package_install",
+  "display_name": "Software Installer",
+  "description": "Searches for and installs new applications or system packages.",
+  "category": "system",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "packages": {
+        "type": "string",
+        "description": "The name or comma-separated names of software to install (e.g., 'firefox' or 'vim,curl')."
+      }
+    },
+    "required": ["packages"]
+  },
+  "handler": {
+    "type": "rust_builtin",
+    "name": "package_install"
+  },
+  "safety": {
+    "requires_confirmation": true,
+    "deny_list": ["rm", "sudo", "apt", "dpkg"]
+  },
+  "examples": [
+    "Install Discord",
+    "Get me Firefox",
+    "Download VS Code and VLC"
+  ]
+}

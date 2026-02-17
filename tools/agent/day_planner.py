@@ -322,60 +322,97 @@ def fetch_weather(day: dt.date):
 
 
 def clothing_rules(forecast, events):
-    tips = []
-    if forecast:
-        tmin = forecast["temp_min"]
-        tmax = forecast["temp_max"]
-        rain = forecast["rain_chance"]
-        if tmax >= 30:
-            tips.append("light, breathable layers")
-        elif tmax <= 12:
-            tips.append("a warm jacket")
-        else:
-            tips.append("medium layers")
-        if tmin <= 8:
-            tips.append("closed shoes")
-        if rain >= 40:
-            tips.append("a rain layer or umbrella")
-
+    import random
+    
+    # Analyze Weather
+    tmin = forecast["temp_min"]
+    tmax = forecast["temp_max"]
+    rain = forecast["rain_chance"]
+    location = forecast["location"]
+    
+    is_hot = tmax >= 30
+    is_warm = 20 <= tmax < 30
+    is_mild = 15 <= tmax < 20
+    is_chilly = 10 <= tmax < 15
+    is_cold = tmax < 10
+    
+    rainy = rain >= 40
+    slight_rain = 20 <= rain < 40
+    dry = rain < 20
+    
+    # Analyze Calendar
     dress_codes = {e.get("dress_code", "casual") for e in events}
-    if "formal" in dress_codes:
-        tips.append("formal attire")
-    elif "business" in dress_codes:
-        tips.append("business-casual pieces")
+    outdoor_events = [e for e in events if e.get("outdoor")]
+    formal_events = [e for e in events if e.get("dress_code") == "formal"]
+    business_events = [e for e in events if e.get("dress_code") == "business"]
+    has_kids = any("kids" in e["title"].lower() or "school" in e["title"].lower() for e in events)
+    
+    advice = []
+    
+    # Base Layer Recommendation
+    if is_hot:
+        advice.append(random.choice([
+            "It's gonna be a scorcher, so definitely stick to light, breathable fabrics.",
+            "It's hot out there—shorts and a t-shirt are the way to go.",
+            "Stay cool with something light today."
+        ]))
+    elif is_warm:
+        if rainy or slight_rain:
+            advice.append("It's warm but wet, so maybe a t-shirt and jeans.")
+        else:
+            advice.append("It's beautiful out! Perfect weather for a t-shirt or a light dress.")
+    elif is_mild:
+        advice.append("It's mild, so layers are your friend. Maybe a long-sleeve tee or a light sweater.")
+    elif is_chilly:
+        advice.append("It's getting chilly. You'll want a sweater or a hoodie.")
+    elif is_cold:
+        if has_kids:
+            advice.append("It's gonna be a cold one! Make sure the kids are bundled up.")
+        else:
+            advice.append("It's freezing! Definitely time for the heavy coat and scarf.")
 
-    if any(e.get("outdoor") for e in events):
-        tips.append("comfortable walking shoes")
-
-    if not tips:
-        tips.append("casual comfortable clothes")
-
-    # Keep output compact and stable.
-    deduped = []
-    for tip in tips:
-        if tip not in deduped:
-            deduped.append(tip)
-    return deduped[:4]
+    # Contextual Add-ons
+    if rainy:
+        advice.append("Don't forget your umbrella, it's really coming down later.")
+    elif slight_rain:
+        if is_warm:
+            advice.append("There's a chance of rain, so maybe toss a raincoat in the car just in case.")
+        else:
+            advice.append("Might sprinkle a bit, so keep a jacket handy.")
+            
+    if outdoor_events:
+        evt = outdoor_events[0]["title"]
+        advice.append(f"Since you have {evt} later, wear comfortable shoes.")
+        
+    if formal_events:
+        evt = formal_events[0]["title"]
+        advice.append(f"You've got {evt}, so you'll need to dress up a bit—suit or formal wear is a must.")
+    elif business_events:
+        evt = business_events[0]["title"]
+        advice.append(f"For {evt}, maybe swap the tee for a collared shirt or blouse.")
+        
+    return " ".join(advice)
 
 
 def build_message(day, forecast, events, tips):
+    if not forecast:
+        return "I couldn't get the weather forecast, so just check the window before you head out!"
+    
     day_label = "today" if day == dt.date.today() else "tomorrow"
-    weather_part = "weather unavailable"
-    if forecast:
-        weather_part = (
-            f"{forecast['location']} forecast {day_label}: "
-            f"{forecast['temp_min']}C to {forecast['temp_max']}C, "
-            f"rain chance {forecast['rain_chance']}%"
-        )
-    event_part = "no calendar events found"
+    
+    # Natural summary
+    weather_summary = f"Forecast for {day_label} in {forecast['location']} is a high of {forecast['temp_max']}°C."
     if events:
-        names = ", ".join(e["title"] for e in events[:3])
-        event_part = f"{len(events)} event(s): {names}"
-    tips_part = "; ".join(tips)
-    return f"{weather_part}. {event_part}. Clothing recommendation: {tips_part}."
+        count = len(events)
+        event_summary = f"You have {count} event{'s' if count > 1 else ''} on the calendar."
+    else:
+        event_summary = "Your calendar is clear."
+        
+    return f"{weather_summary} {event_summary} {tips}"
 
 
 def main():
+
     payload = "today"
     if len(sys.argv) > 1:
         payload = " ".join(sys.argv[1:])

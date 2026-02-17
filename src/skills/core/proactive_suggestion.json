@@ -1,0 +1,25 @@
+{
+  "name": "proactive_suggestion",
+  "display_name": "Proactive Assistant",
+  "description": "Triggered when the system detects a state change that needs user attention (e.g., low battery, new wifi).",
+  "category": "system",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "trigger": {
+        "type": "string",
+        "description": "The event that triggered this suggestion."
+      },
+      "message": {
+        "type": "string",
+        "description": "The helpful message to show the user."
+      }
+    },
+    "required": ["trigger", "message"]
+  },
+  "handler": {
+    "type": "rust_builtin",
+    "name": "ui_notification"
+  },
+  "examples": []
+}

@@ -3,8 +3,18 @@ name = "ai-distro-agent"
 version = "0.1.0"
 edition = "2021"
 
+[dev-dependencies]
+tempfile = "3.8"
+
 [dependencies]
 ai-distro-common = { path = "../ai-distro-common" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 log = "0.4"
+env_logger = "0.10"
+sha2 = "0.10"
+tokio = { version = "1.0", features = ["full"] }
+rand = "0.8"
+hex = "0.4"
+zbus = { version = "3.14", features = ["tokio"] }
+reqwest = { version = "0.11", features = ["json"] }

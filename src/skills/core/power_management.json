@@ -1,0 +1,29 @@
+{
+  "name": "power_management",
+  "display_name": "Power Control",
+  "description": "Manages system power states like rebooting, shutting down, or sleeping.",
+  "category": "system",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["reboot", "shutdown", "sleep"],
+        "description": "The power action to perform."
+      }
+    },
+    "required": ["action"]
+  },
+  "handler": {
+    "type": "rust_builtin",
+    "name": "power_management"
+  },
+  "safety": {
+    "requires_confirmation": true
+  },
+  "examples": [
+    "Reboot my computer",
+    "Turn off the PC",
+    "Go to sleep"
+  ]
+}

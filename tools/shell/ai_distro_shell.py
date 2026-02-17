@@ -40,6 +40,7 @@ def agent_request(payload: dict, timeout=4.0):
 
 class ShellHandler(SimpleHTTPRequestHandler):
     OAUTH_SESSIONS = {}
+    PROACTIVE_QUEUE = deque(maxlen=10)
 
     def _load_json(self, path):
         try:
@@ -525,6 +526,14 @@ class ShellHandler(SimpleHTTPRequestHandler):
                 payload = {"status": "ok", "tasks": self._load_recent_task_events(limit=8)}
                 self.wfile.write(json.dumps(payload).encode("utf-8"))
                 return
+            if self.path == "/api/proactive-events":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                events = list(self.PROACTIVE_QUEUE)
+                self.PROACTIVE_QUEUE.clear()
+                self.wfile.write(json.dumps({"status": "ok", "events": events}).encode("utf-8"))
+                return
             if parsed.path == "/api/provider/connect/status":
                 target = (parse_qs(parsed.query or "").get("target") or [""])[0].strip().lower()
                 sess = self._oauth_session_for(target)
@@ -656,6 +665,21 @@ class ShellHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             msg = {"status": "ok", "path": detail}
             self.wfile.write(json.dumps(msg).encode("utf-8"))
+            return
+        if parsed.path == "/api/proactive-push":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw = self.rfile.read(content_length)
+            try:
+                payload = json.loads(raw.decode("utf-8"))
+                message = payload.get("message", "")
+                if message:
+                    ShellHandler.PROACTIVE_QUEUE.append({"message": message, "ts": time.time()})
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "ok"}).encode("utf-8"))
+            except:
+                self.send_error(400, "invalid push")
             return
         if parsed.path == "/api/providers":
             content_length = int(self.headers.get("Content-Length", "0"))
