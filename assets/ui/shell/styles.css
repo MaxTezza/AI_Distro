@@ -237,6 +237,76 @@ body {
   line-height: 1.4;
 }
 
+.app-tasks-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.app-task-item {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.app-task-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.app-task-action {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.app-task-status {
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.app-task-status.ok {
+  background: rgba(72, 247, 195, 0.18);
+  color: var(--accent);
+  border: 1px solid rgba(72, 247, 195, 0.4);
+}
+
+.app-task-status.confirm {
+  background: rgba(255, 184, 107, 0.2);
+  color: var(--accent-2);
+  border: 1px solid rgba(255, 184, 107, 0.4);
+}
+
+.app-task-status.error {
+  background: rgba(255, 114, 114, 0.18);
+  color: #ff9a9a;
+  border: 1px solid rgba(255, 114, 114, 0.4);
+}
+
+.app-task-message {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.app-task-time {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.app-task-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .persona-button.active {
   background: rgba(255, 184, 107, 0.16);
   border-color: rgba(255, 184, 107, 0.6);

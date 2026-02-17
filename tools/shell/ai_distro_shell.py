@@ -4,6 +4,7 @@ import os
 import socket
 import subprocess
 import time
+from collections import deque
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from pathlib import Path
 import re
@@ -15,6 +16,7 @@ DEFAULT_PERSONA = "/etc/ai-distro/persona.json"
 DEFAULT_PERSONA_ALFRED = "/etc/ai-distro/persona.alfred.json"
 DEFAULT_ONBOARDING = os.path.expanduser("~/.config/ai-distro/shell-onboarding.json")
 DEFAULT_PROVIDERS = os.path.expanduser("~/.config/ai-distro/providers.json")
+DEFAULT_AUDIT_LOG = "/var/log/ai-distro-agent/audit.jsonl"
 
 
 def agent_request(payload: dict, timeout=4.0):
@@ -162,6 +164,50 @@ class ShellHandler(SimpleHTTPRequestHandler):
     def _extract_url(self, text):
         m = re.search(r"https://[^\s]+", text or "")
         return m.group(0) if m else ""
+
+    def _audit_log_path(self):
+        return os.environ.get("AI_DISTRO_AUDIT_LOG", DEFAULT_AUDIT_LOG)
+
+    def _load_recent_task_events(self, limit=8):
+        log_path = self._audit_log_path()
+        if not os.path.exists(log_path):
+            return []
+
+        recent = deque(maxlen=max(1, min(int(limit), 30)))
+        try:
+            with open(log_path, "r", encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except Exception:
+                        continue
+                    if not isinstance(obj, dict):
+                        continue
+                    if obj.get("type") != "action_outcome":
+                        continue
+                    action = str(obj.get("action", "")).strip()
+                    if action not in ("package_install", "package_remove", "system_update"):
+                        continue
+                    status = str(obj.get("status", "")).strip().lower() or "unknown"
+                    msg = str(obj.get("message", "")).strip() or "Task completed."
+                    ts = obj.get("ts")
+                    recent.append(
+                        {
+                            "ts": ts,
+                            "action": action,
+                            "status": status,
+                            "message": msg,
+                        }
+                    )
+        except Exception:
+            return []
+
+        out = list(recent)
+        out.reverse()
+        return out
 
     def _provider_env(self, provider, payload):
         env = os.environ.copy()
@@ -364,6 +410,13 @@ class ShellHandler(SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 payload = {"status": "ok", "providers": self._load_providers()}
+                self.wfile.write(json.dumps(payload).encode("utf-8"))
+                return
+            if self.path == "/api/app-tasks":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                payload = {"status": "ok", "tasks": self._load_recent_task_events(limit=8)}
                 self.wfile.write(json.dumps(payload).encode("utf-8"))
                 return
             self.send_error(404, "unknown api")

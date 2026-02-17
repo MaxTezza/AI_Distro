@@ -26,6 +26,7 @@ const emailConnectFinishButton = document.getElementById("email-connect-finish")
 const emailTestButton = document.getElementById("email-test");
 const emailAuthLink = document.getElementById("email-auth-link");
 const emailSetupNote = document.getElementById("email-setup-note");
+const appTasksList = document.getElementById("app-tasks-list");
 const onboarding = document.getElementById("onboarding");
 const onboardingTitle = document.getElementById("onboarding-title");
 const onboardingStepLabel = document.getElementById("onboarding-step-label");
@@ -53,6 +54,7 @@ let providers = {
   email: "gmail",
   weather: "default",
 };
+let appTasks = [];
 
 let fillerPhrases = [
   "Working on it.",
@@ -350,6 +352,62 @@ const setStatus = (online, text) => {
   statusText.textContent = text;
 };
 
+const formatTaskTime = (ts) => {
+  if (typeof ts !== "number") return "";
+  const d = new Date(ts * 1000);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
+const taskActionLabel = (action) => {
+  if (action === "package_install") return "Install app";
+  if (action === "package_remove") return "Remove app";
+  if (action === "system_update") return "Update apps";
+  return "Task";
+};
+
+const renderAppTasks = () => {
+  if (!appTasksList) return;
+  if (!Array.isArray(appTasks) || appTasks.length === 0) {
+    appTasksList.innerHTML = `<div class="app-task-empty">No recent app tasks yet.</div>`;
+    return;
+  }
+  const rows = appTasks
+    .slice(0, 8)
+    .map((t) => {
+      const status = (t.status || "unknown").toLowerCase();
+      const statusClass = ["ok", "error", "confirm"].includes(status) ? status : "error";
+      const msg = (t.message || "Task update available.").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const action = taskActionLabel(t.action || "");
+      const time = formatTaskTime(t.ts);
+      return `
+        <div class="app-task-item">
+          <div class="app-task-head">
+            <span class="app-task-action">${action}</span>
+            <span class="app-task-status ${statusClass}">${status}</span>
+          </div>
+          <div class="app-task-message">${msg}</div>
+          <div class="app-task-time">${time}</div>
+        </div>
+      `;
+    })
+    .join("");
+  appTasksList.innerHTML = rows;
+};
+
+const loadAppTasks = async () => {
+  try {
+    const res = await fetch(`${apiBase}/api/app-tasks`);
+    if (!res.ok) return;
+    const payload = await res.json();
+    if (!Array.isArray(payload.tasks)) return;
+    appTasks = payload.tasks;
+    renderAppTasks();
+  } catch (err) {
+    // ignore
+  }
+};
+
 const stopFiller = () => {
   if (fillerTimer) {
     clearTimeout(fillerTimer);
@@ -592,6 +650,7 @@ const sendCommand = async (text) => {
       body: JSON.stringify({ text }),
     });
     const payload = await res.json();
+    loadAppTasks();
     stopFiller();
     if (payload.status === "confirm") {
       pendingConfirmation = payload.confirmation_id || null;
@@ -635,6 +694,7 @@ const sendConfirm = async () => {
       body: JSON.stringify({ name: "confirm", payload: pendingConfirmation }),
     });
     const payload = await res.json();
+    loadAppTasks();
     stopFiller();
     pendingConfirmation = null;
     confirmButton.classList.add("hidden");
@@ -795,6 +855,7 @@ const ping = async () => {
 initVoice();
 ping();
 setInterval(ping, 5000);
+setInterval(loadAppTasks, 7000);
 
 const loadPersonaPresets = async () => {
   try {
@@ -827,3 +888,4 @@ loadPersonaPresets();
 maybeStartOnboarding();
 refreshProviderSetupUI();
 loadProviders();
+loadAppTasks();
