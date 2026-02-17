@@ -29,10 +29,22 @@ def main():
             print(proc.stderr.strip(), file=sys.stderr)
         return proc.returncode
 
+    if provider == "outlook":
+        tool = str(here / "outlook_tool.py")
+        proc = subprocess.run(
+            [sys.executable, tool, cmd, payload],
+            text=True,
+            capture_output=True,
+        )
+        if proc.stdout:
+            print(proc.stdout.strip())
+        if proc.returncode != 0 and proc.stderr:
+            print(proc.stderr.strip(), file=sys.stderr)
+        return proc.returncode
+
     print(f"Email provider '{provider}' is not configured yet.")
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -98,6 +98,15 @@ Gmail (optional, read-only):
 - This writes `~/.config/ai-distro/google-gmail-oauth.json`
 - Then use `summarize my email`, `search my email for <query>`, and `draft email to <address> about <subject>`.
 
+Outlook (optional, read-only):
+- Set `AI_DISTRO_MICROSOFT_CLIENT_ID` and `AI_DISTRO_MICROSOFT_CLIENT_SECRET`
+- Generate refresh token:
+  - `python3 tools/agent/microsoft_outlook_oauth.py auth-url`
+  - Authorize in browser, copy `code` from redirect URL
+  - `python3 tools/agent/microsoft_outlook_oauth.py exchange "<code>"`
+- This writes `~/.config/ai-distro/microsoft-outlook-oauth.json`
+- Set email provider to `outlook` in shell settings.
+
 Example file:
 
 ```json

@@ -43,11 +43,23 @@
 - `AI_DISTRO_GOOGLE_GMAIL_OAUTH_FILE` (default: `~/.config/ai-distro/google-gmail-oauth.json`)
   OAuth config for Gmail integration (`client_id`, `client_secret`, `refresh_token`).
 
+- `AI_DISTRO_MICROSOFT_OUTLOOK_OAUTH_FILE` (default: `~/.config/ai-distro/microsoft-outlook-oauth.json`)
+  OAuth config for Outlook integration (`client_id`, `client_secret`, `tenant_id`, `refresh_token`).
+
 - `AI_DISTRO_GOOGLE_CLIENT_ID`, `AI_DISTRO_GOOGLE_CLIENT_SECRET`, `AI_DISTRO_GOOGLE_REFRESH_TOKEN`
   Optional env overrides for Google Calendar OAuth credentials.
 
 - `AI_DISTRO_GOOGLE_GMAIL_REFRESH_TOKEN`
   Optional env override for Gmail refresh token (or reuse `AI_DISTRO_GOOGLE_REFRESH_TOKEN`).
+
+- `AI_DISTRO_MICROSOFT_CLIENT_ID`, `AI_DISTRO_MICROSOFT_CLIENT_SECRET`, `AI_DISTRO_MICROSOFT_REFRESH_TOKEN`
+  Optional env overrides for Outlook integration.
+
+- `AI_DISTRO_MICROSOFT_TENANT_ID` (default: `common`)
+  Microsoft Entra tenant for OAuth token exchange.
+
+- `AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE`
+  OAuth scopes for Outlook integration (default includes `Mail.Read` + `offline_access`).
 
 - `AI_DISTRO_GOOGLE_CALENDAR_ID` (default: `primary`)
   Calendar ID used for Google Calendar event fetch.
