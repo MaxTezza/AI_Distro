@@ -44,6 +44,7 @@ cp "$ROOT_DIR/tools/agent/calendar_google_tool.py" "$ROOT/usr/lib/ai-distro/cale
 cp "$ROOT_DIR/tools/agent/calendar_router.py" "$ROOT/usr/lib/ai-distro/calendar_router.py"
 cp "$ROOT_DIR/tools/agent/gmail_tool.py" "$ROOT/usr/lib/ai-distro/gmail_tool.py"
 cp "$ROOT_DIR/tools/agent/outlook_tool.py" "$ROOT/usr/lib/ai-distro/outlook_tool.py"
+cp "$ROOT_DIR/tools/agent/email_imap_tool.py" "$ROOT/usr/lib/ai-distro/email_imap_tool.py"
 cp "$ROOT_DIR/tools/agent/email_router.py" "$ROOT/usr/lib/ai-distro/email_router.py"
 
 echo "Staged Debian root at $ROOT"
