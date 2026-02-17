@@ -37,11 +37,13 @@ cp "$ROOT_DIR/tools/agent/provider_config.py" "$ROOT/usr/lib/ai-distro/provider_
 cp "$ROOT_DIR/tools/agent/day_planner.py" "$ROOT/usr/lib/ai-distro/day_planner.py"
 cp "$ROOT_DIR/tools/agent/google_calendar_oauth.py" "$ROOT/usr/lib/ai-distro/google_calendar_oauth.py"
 cp "$ROOT_DIR/tools/agent/google_gmail_oauth.py" "$ROOT/usr/lib/ai-distro/google_gmail_oauth.py"
+cp "$ROOT_DIR/tools/agent/microsoft_outlook_oauth.py" "$ROOT/usr/lib/ai-distro/microsoft_outlook_oauth.py"
 cp "$ROOT_DIR/tools/agent/weather_tool.py" "$ROOT/usr/lib/ai-distro/weather_tool.py"
 cp "$ROOT_DIR/tools/agent/calendar_tool.py" "$ROOT/usr/lib/ai-distro/calendar_tool.py"
 cp "$ROOT_DIR/tools/agent/calendar_google_tool.py" "$ROOT/usr/lib/ai-distro/calendar_google_tool.py"
 cp "$ROOT_DIR/tools/agent/calendar_router.py" "$ROOT/usr/lib/ai-distro/calendar_router.py"
 cp "$ROOT_DIR/tools/agent/gmail_tool.py" "$ROOT/usr/lib/ai-distro/gmail_tool.py"
+cp "$ROOT_DIR/tools/agent/outlook_tool.py" "$ROOT/usr/lib/ai-distro/outlook_tool.py"
 cp "$ROOT_DIR/tools/agent/email_router.py" "$ROOT/usr/lib/ai-distro/email_router.py"
 
 echo "Staged Debian root at $ROOT"
