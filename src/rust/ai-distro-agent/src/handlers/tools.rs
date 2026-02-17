@@ -5,7 +5,7 @@ use std::process::Command;
 pub fn handle_plan_day_outfit(req: &ActionRequest) -> ActionResponse {
     let payload = req.payload.as_deref().unwrap_or("today");
     let planner = std::env::var("AI_DISTRO_DAY_PLANNER")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/day_planner.py".to_string());
+        .unwrap_or_else(|_| "/usr/local/bin/ai-distro-tools/day_planner.py".to_string());
     match Command::new("python3").arg(planner).arg(payload).output() {
         Ok(out) if out.status.success() => {
             let msg = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -33,7 +33,7 @@ pub fn handle_plan_day_outfit(req: &ActionRequest) -> ActionResponse {
 pub fn handle_weather_get(req: &ActionRequest) -> ActionResponse {
     let payload = req.payload.as_deref().unwrap_or("today");
     let tool = std::env::var("AI_DISTRO_WEATHER_TOOL")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/weather_tool.py".to_string());
+        .unwrap_or_else(|_| "/usr/local/bin/ai-distro-tools/weather_tool.py".to_string());
     match Command::new("python3").arg(tool).arg(payload).output() {
         Ok(out) if out.status.success() => {
             let msg = String::from_utf8_lossy(&out.stdout).trim().to_string();
@@ -59,7 +59,7 @@ pub fn handle_calendar_add_event(req: &ActionRequest) -> ActionResponse {
         return error_response(&req.name, "missing calendar payload");
     };
     let tool = std::env::var("AI_DISTRO_CALENDAR_ROUTER")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/calendar_router.py".to_string());
+        .unwrap_or_else(|_| "/usr/local/bin/ai-distro-tools/calendar_router.py".to_string());
     match Command::new("python3")
         .arg(tool)
         .arg("add")
@@ -84,7 +84,7 @@ pub fn handle_calendar_add_event(req: &ActionRequest) -> ActionResponse {
 pub fn handle_calendar_list_day(req: &ActionRequest) -> ActionResponse {
     let payload = req.payload.as_deref().unwrap_or("today");
     let tool = std::env::var("AI_DISTRO_CALENDAR_ROUTER")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/calendar_router.py".to_string());
+        .unwrap_or_else(|_| "/usr/local/bin/ai-distro-tools/calendar_router.py".to_string());
     match Command::new("python3")
         .arg(tool)
         .arg("list")
@@ -116,7 +116,7 @@ pub fn handle_calendar_list_day(req: &ActionRequest) -> ActionResponse {
 pub fn handle_email_inbox_summary(req: &ActionRequest) -> ActionResponse {
     let payload = req.payload.as_deref().unwrap_or("in:inbox newer_than:2d");
     let tool = std::env::var("AI_DISTRO_EMAIL_ROUTER")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/email_router.py".to_string());
+        .unwrap_or_else(|_| "/usr/local/bin/ai-distro-tools/email_router.py".to_string());
     match Command::new("python3")
         .arg(tool)
         .arg("summary")
@@ -148,7 +148,7 @@ pub fn handle_email_inbox_summary(req: &ActionRequest) -> ActionResponse {
 pub fn handle_email_search(req: &ActionRequest) -> ActionResponse {
     let payload = req.payload.as_deref().unwrap_or("in:inbox");
     let tool = std::env::var("AI_DISTRO_EMAIL_ROUTER")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/email_router.py".to_string());
+        .unwrap_or_else(|_| "/usr/local/bin/ai-distro-tools/email_router.py".to_string());
     match Command::new("python3")
         .arg(tool)
         .arg("search")
@@ -182,7 +182,7 @@ pub fn handle_email_draft(req: &ActionRequest) -> ActionResponse {
         return error_response(&req.name, "missing draft payload");
     };
     let tool = std::env::var("AI_DISTRO_EMAIL_ROUTER")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/email_router.py".to_string());
+        .unwrap_or_else(|_| "/usr/local/bin/ai-distro-tools/email_router.py".to_string());
     match Command::new("python3")
         .arg(tool)
         .arg("draft")

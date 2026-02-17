@@ -1,0 +1,27 @@
+{
+  "name": "plan_day_outfit",
+  "display_name": "Clothing & Planner Assistant",
+  "description": "Analyzes weather and calendar to recommend an outfit and plan for the day.",
+  "category": "utility",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "day": {
+        "type": "string",
+        "enum": ["today", "tomorrow"],
+        "default": "today"
+      }
+    }
+  },
+  "handler": {
+    "type": "python",
+    "path": "tools/agent/day_planner.py"
+  },
+  "examples": [
+    "What should I wear today?",
+    "What's the plan for tomorrow?",
+    "Give me the day's outfit advice.",
+    "Do I need a jacket?",
+    "Plan my day outfit."
+  ]
+}
