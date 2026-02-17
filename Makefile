@@ -32,6 +32,9 @@ release-iso: deps build-rust package-deb rootfs iso-build iso-assemble
 
 qa-voice:
 	python3 tools/dev/test_intent_parser.py
+	python3 tools/dev/test_calendar_microsoft_provider.py
+	python3 tools/dev/test_outlook_tool.py
+	python3 tools/dev/verify_audit_chain.py --self-test
 	python3 tools/dev/voice_acceptance.py
 	python3 tools/dev/agent_voice_top20_check.py
 	cargo test --manifest-path src/rust/Cargo.toml

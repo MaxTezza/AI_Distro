@@ -24,7 +24,7 @@ The goal is "regular people can talk naturally to their machine and it gets thin
 - Agent safety baseline is in place: confirmations, policy allowlists, rate limits, and hash-chained audit logs.
 - Provider-router architecture is live for integrations (calendar/email).
 - Calendar and email integrations now support multiple providers:
-  - Calendar: `local`, `google` (router-ready for Microsoft)
+  - Calendar: `local`, `google`, `microsoft`
   - Email: `gmail`, `outlook`, `imap` (IMAP enables Proton Bridge compatibility)
 - Voice actions now include:
   - `weather_get`
@@ -44,10 +44,9 @@ make qa-voice
 
 ## Top Priorities (Next)
 
-1. Microsoft Calendar provider plugin (read/list first, then add-event write path with confirmation)
-2. Outlook draft support so `email_draft` works across `gmail` + `outlook` + future providers
-3. QA security gate (`verify_audit_chain`) wired into CI and one-command local gate
-4. Voice UX polish ("I heard / I will do" + clearer failure recovery copy)
+1. QA security gate (`verify_audit_chain`) wired into CI and one-command local gate
+2. Voice UX polish ("I heard / I will do" + clearer failure recovery copy)
+3. Expand provider regression checks for real-token smoke coverage in CI-safe mode
 
 ## Release Quality Bar
 

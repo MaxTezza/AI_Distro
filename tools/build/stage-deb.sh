@@ -41,6 +41,7 @@ cp "$ROOT_DIR/tools/agent/microsoft_outlook_oauth.py" "$ROOT/usr/lib/ai-distro/m
 cp "$ROOT_DIR/tools/agent/weather_tool.py" "$ROOT/usr/lib/ai-distro/weather_tool.py"
 cp "$ROOT_DIR/tools/agent/calendar_tool.py" "$ROOT/usr/lib/ai-distro/calendar_tool.py"
 cp "$ROOT_DIR/tools/agent/calendar_google_tool.py" "$ROOT/usr/lib/ai-distro/calendar_google_tool.py"
+cp "$ROOT_DIR/tools/agent/calendar_microsoft_tool.py" "$ROOT/usr/lib/ai-distro/calendar_microsoft_tool.py"
 cp "$ROOT_DIR/tools/agent/calendar_router.py" "$ROOT/usr/lib/ai-distro/calendar_router.py"
 cp "$ROOT_DIR/tools/agent/gmail_tool.py" "$ROOT/usr/lib/ai-distro/gmail_tool.py"
 cp "$ROOT_DIR/tools/agent/outlook_tool.py" "$ROOT/usr/lib/ai-distro/outlook_tool.py"

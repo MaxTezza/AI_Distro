@@ -16,6 +16,9 @@ Run:
 ```bash
 cd /home/jmt3/AI_Distro
 python3 tools/dev/test_intent_parser.py
+python3 tools/dev/test_calendar_microsoft_provider.py
+python3 tools/dev/test_outlook_tool.py
+python3 tools/dev/verify_audit_chain.py --self-test
 python3 tools/dev/voice_acceptance.py
 python3 tools/dev/agent_voice_top20_check.py
 ```
@@ -23,6 +26,9 @@ python3 tools/dev/agent_voice_top20_check.py
 Expected:
 
 - `test_intent_parser.py` prints `ok`
+- `test_calendar_microsoft_provider.py` prints `ok`
+- `test_outlook_tool.py` prints `ok`
+- `verify_audit_chain.py --self-test` prints `ok`
 - `voice_acceptance.py` returns `Result: X/Y (...)`
 - `agent_voice_top20_check.py` validates the packaged parser behavior
 - Release target is `100%` pass for current acceptance file

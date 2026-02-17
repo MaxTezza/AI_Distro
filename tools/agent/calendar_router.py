@@ -19,9 +19,12 @@ def main():
     here = Path(__file__).resolve().parent
     local_tool = str(here / "calendar_tool.py")
     google_tool = str(here / "calendar_google_tool.py")
+    microsoft_tool = str(here / "calendar_microsoft_tool.py")
     tool = local_tool
     if provider == "google":
         tool = google_tool
+    elif provider == "microsoft":
+        tool = microsoft_tool
 
     proc = subprocess.run(
         [sys.executable, tool, cmd, payload],
@@ -37,4 +40,3 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

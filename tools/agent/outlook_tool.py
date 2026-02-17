@@ -37,11 +37,7 @@ def oauth_config():
     return None if missing else cfg
 
 
-def access_token(cfg):
-    scope = os.environ.get(
-        "AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE",
-        "offline_access https://graph.microsoft.com/Mail.Read",
-    ).strip()
+def access_token(cfg, scope):
     token_url = f"https://login.microsoftonline.com/{cfg['tenant_id']}/oauth2/v2.0/token"
     body = urllib.parse.urlencode(
         {
@@ -69,6 +65,20 @@ def graph_get(token, url, extra_headers=None):
     if extra_headers:
         headers.update(extra_headers)
     req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=8.0) as resp:
+        return json.loads(resp.read().decode("utf-8", errors="ignore"))
+
+
+def graph_post(token, url, payload):
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
     with urllib.request.urlopen(req, timeout=8.0) as resp:
         return json.loads(resp.read().decode("utf-8", errors="ignore"))
 
@@ -125,22 +135,64 @@ def cmd_search(token, query):
     return format_items(items[:5], f"Email search '{q}'")
 
 
+def parse_draft_payload(raw):
+    parts = [p.strip() for p in (raw or "").split("|")]
+    if len(parts) < 3:
+        return None
+    to = parts[0]
+    subject = parts[1]
+    body = parts[2]
+    if not to or not subject:
+        return None
+    return {"to": to, "subject": subject, "body": body}
+
+
+def cmd_draft(token, payload_raw):
+    payload = parse_draft_payload(payload_raw)
+    if not payload:
+        return "Invalid draft payload."
+
+    req_body = {
+        "subject": payload["subject"],
+        "body": {
+            "contentType": "Text",
+            "content": payload["body"],
+        },
+        "toRecipients": [
+            {
+                "emailAddress": {
+                    "address": payload["to"],
+                }
+            }
+        ],
+    }
+    out = graph_post(token, "https://graph.microsoft.com/v1.0/me/messages", req_body)
+    draft_id = str(out.get("id", "")).strip()
+    if draft_id:
+        return f"Draft created for {payload['to']} with subject '{payload['subject']}'."
+    return "Draft created."
+
+
 def main():
     if len(sys.argv) < 2:
         print("usage: outlook_tool.py summary|search|draft [query]")
         return 2
     cmd = sys.argv[1].strip().lower()
     query = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else ""
+    read_scope = "offline_access https://graph.microsoft.com/Mail.Read"
+    write_scope = "offline_access https://graph.microsoft.com/Mail.ReadWrite"
     if cmd == "draft":
-        print("Outlook draft is not enabled yet.")
-        return 0
+        default_scope = write_scope
+    else:
+        default_scope = read_scope
+    scope = os.environ.get("AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE", default_scope).strip() or default_scope
 
     cfg = oauth_config()
     if not cfg:
         print("Outlook OAuth not configured.")
         return 0
     try:
-        token = access_token(cfg)
+        token = access_token(cfg, scope)
         if not token:
             print("Unable to acquire Outlook access token.")
             return 0
@@ -155,6 +207,9 @@ def main():
         if cmd == "search":
             print(cmd_search(token, query))
             return 0
+        if cmd == "draft":
+            print(cmd_draft(token, query))
+            return 0
     except Exception:
         print("Outlook request failed.")
         return 0
@@ -164,4 +219,3 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

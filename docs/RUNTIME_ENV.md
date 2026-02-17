@@ -23,7 +23,7 @@
   Helper script for local calendar add/list requests (`calendar_add_event`, `calendar_list_day`).
 
 - `AI_DISTRO_CALENDAR_ROUTER` (default: `/usr/lib/ai-distro/calendar_router.py`)
-  Provider router for calendar actions (`local`, `google`, later `microsoft`).
+  Provider router for calendar actions (`local`, `google`, `microsoft`).
 
 - `AI_DISTRO_GMAIL_TOOL` (default: `/usr/lib/ai-distro/gmail_tool.py`)
   Helper script for Gmail actions (`email_inbox_summary`, `email_search`, `email_draft`).
@@ -59,7 +59,10 @@
   Microsoft Entra tenant for OAuth token exchange.
 
 - `AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE`
-  OAuth scopes for Outlook integration (default includes `Mail.Read` + `offline_access`).
+  OAuth scopes for Outlook integration (default: `Mail.Read` for read actions, `Mail.ReadWrite` for draft actions).
+
+- `AI_DISTRO_MICROSOFT_CALENDAR_SCOPE`
+  OAuth scopes for Microsoft Calendar integration (default: `Calendars.Read` for list and `Calendars.ReadWrite` for add).
 
 - `AI_DISTRO_IMAP_HOST`, `AI_DISTRO_IMAP_PORT` (default: `993`)
   IMAP server host/port for generic email provider mode.

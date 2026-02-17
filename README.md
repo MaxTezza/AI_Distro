@@ -58,7 +58,7 @@ Audit entries are hash-chained and survive rotation (`AI_DISTRO_AUDIT_ROTATE_BYT
 
 ## Plugin Providers
 Core actions stay stable while providers are swappable:
-- Calendar: `local`, `google` (microsoft planned)
+- Calendar: `local`, `google`, `microsoft`
 - Email: `gmail`, `outlook`, `imap`
 
 Set providers in shell settings or via env:
@@ -98,7 +98,7 @@ Gmail (optional, read-only):
 - This writes `~/.config/ai-distro/google-gmail-oauth.json`
 - Then use `summarize my email`, `search my email for <query>`, and `draft email to <address> about <subject>`.
 
-Outlook (optional, read-only):
+Outlook (optional):
 - Set `AI_DISTRO_MICROSOFT_CLIENT_ID` and `AI_DISTRO_MICROSOFT_CLIENT_SECRET`
 - Generate refresh token:
   - `python3 tools/agent/microsoft_outlook_oauth.py auth-url`
@@ -106,6 +106,17 @@ Outlook (optional, read-only):
   - `python3 tools/agent/microsoft_outlook_oauth.py exchange "<code>"`
 - This writes `~/.config/ai-distro/microsoft-outlook-oauth.json`
 - Set email provider to `outlook` in shell settings.
+- For draft support, include `Mail.ReadWrite` when generating tokens:
+  - `AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE="offline_access https://graph.microsoft.com/Mail.ReadWrite" python3 tools/agent/microsoft_outlook_oauth.py auth-url`
+
+Microsoft Calendar (optional):
+- Set `AI_DISTRO_MICROSOFT_CLIENT_ID` and `AI_DISTRO_MICROSOFT_CLIENT_SECRET`
+- Generate refresh token:
+  - `AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE="offline_access https://graph.microsoft.com/Calendars.ReadWrite" python3 tools/agent/microsoft_outlook_oauth.py auth-url`
+  - Authorize in browser, copy `code` from redirect URL
+  - `AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE="offline_access https://graph.microsoft.com/Calendars.ReadWrite" python3 tools/agent/microsoft_outlook_oauth.py exchange "<code>"`
+- This writes `~/.config/ai-distro/microsoft-outlook-oauth.json`
+- Set calendar provider to `microsoft` in shell settings.
 
 IMAP / Proton Bridge (optional, read-only):
 - Set email provider to `imap` in shell settings.
