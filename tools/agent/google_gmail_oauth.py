@@ -34,16 +34,18 @@ def cmd_auth_url():
     cfg = load_client()
     if not cfg:
         return 2
-    params = urllib.parse.urlencode(
-        {
-            "client_id": cfg["client_id"],
-            "redirect_uri": cfg["redirect_uri"],
-            "response_type": "code",
-            "scope": DEFAULT_SCOPE,
-            "access_type": "offline",
-            "prompt": "consent",
-        }
-    )
+    query = {
+        "client_id": cfg["client_id"],
+        "redirect_uri": cfg["redirect_uri"],
+        "response_type": "code",
+        "scope": DEFAULT_SCOPE,
+        "access_type": "offline",
+        "prompt": "consent",
+    }
+    state = os.environ.get("AI_DISTRO_OAUTH_STATE", "").strip()
+    if state:
+        query["state"] = state
+    params = urllib.parse.urlencode(query)
     print("Open this URL, authorize, then run:")
     print("  google_gmail_oauth.py exchange <code>")
     print()

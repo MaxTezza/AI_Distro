@@ -55,6 +55,7 @@ let providers = {
   weather: "default",
 };
 let appTasks = [];
+const oauthPollTimers = {};
 
 let fillerPhrases = [
   "Working on it.",
@@ -171,23 +172,60 @@ const refreshProviderSetupUI = () => {
   const calendarNeedsOauth = providerNeedsOAuth("calendar", providers.calendar);
   if (calendarClientIdInput) calendarClientIdInput.classList.toggle("hidden", !calendarNeedsOauth);
   if (calendarClientSecretInput) calendarClientSecretInput.classList.toggle("hidden", !calendarNeedsOauth);
-  if (calendarCodeInput) calendarCodeInput.classList.toggle("hidden", !calendarNeedsOauth);
+  if (calendarCodeInput) calendarCodeInput.classList.add("hidden");
+  if (calendarConnectFinishButton) calendarConnectFinishButton.classList.add("hidden");
   if (!calendarNeedsOauth) setAuthLink("calendar", "");
   if (!calendarNeedsOauth) setSetupNote("calendar", "No account connection needed for local calendar.");
-  if (calendarNeedsOauth) setSetupNote("calendar", "Click Connect, authorize in browser, then paste code and click Finish.");
+  if (calendarNeedsOauth) setSetupNote("calendar", "Click Connect and approve access in your browser. Setup will finish automatically.");
 
   const emailNeedsOauth = providerNeedsOAuth("email", providers.email);
   if (emailClientIdInput) emailClientIdInput.classList.toggle("hidden", !emailNeedsOauth);
   if (emailClientSecretInput) emailClientSecretInput.classList.toggle("hidden", !emailNeedsOauth);
-  if (emailCodeInput) emailCodeInput.classList.toggle("hidden", !emailNeedsOauth);
+  if (emailCodeInput) emailCodeInput.classList.add("hidden");
+  if (emailConnectFinishButton) emailConnectFinishButton.classList.add("hidden");
   if (!emailNeedsOauth) setAuthLink("email", "");
   if (!emailNeedsOauth) setSetupNote("email", "No OAuth needed for IMAP. Use provider credentials in settings.");
-  if (emailNeedsOauth) setSetupNote("email", "Click Connect, authorize in browser, then paste code and click Finish.");
+  if (emailNeedsOauth) setSetupNote("email", "Click Connect and approve access in your browser. Setup will finish automatically.");
+};
+
+const stopProviderStatusPoll = (target) => {
+  if (oauthPollTimers[target]) {
+    clearInterval(oauthPollTimers[target]);
+    delete oauthPollTimers[target];
+  }
+};
+
+const pollProviderConnectStatus = async (target) => {
+  try {
+    const res = await fetch(`${apiBase}/api/provider/connect/status?target=${encodeURIComponent(target)}`);
+    if (!res.ok) return;
+    const out = await res.json();
+    if (!out || !out.status) return;
+    if (out.status === "idle") return;
+    if (out.auth_url) setAuthLink(target, out.auth_url);
+    if (out.status === "pending") {
+      setSetupNote(target, out.message || "Waiting for authorization approval...");
+      return;
+    }
+    if (out.status === "connected") {
+      setSetupNote(target, out.message || "Provider connected.");
+      addMessage("assistant", `${target === "calendar" ? "Calendar" : "Email"} provider connected.`);
+      stopProviderStatusPoll(target);
+      return;
+    }
+    if (out.status === "error") {
+      setSetupNote(target, out.message || "Provider connection failed.");
+      stopProviderStatusPoll(target);
+    }
+  } catch (err) {
+    // ignore
+  }
 };
 
 const startProviderConnect = async (target) => {
   const payload = getProviderPayload(target);
   setSetupNote(target, "Preparing authorization link...");
+  stopProviderStatusPoll(target);
   try {
     const res = await fetch(`${apiBase}/api/provider/connect/start`, {
       method: "POST",
@@ -205,8 +243,10 @@ const startProviderConnect = async (target) => {
     } else {
       setAuthLink(target, "");
     }
-    setSetupNote(target, out.message || "Authorization ready.");
-    addMessage("assistant", `${target === "calendar" ? "Calendar" : "Email"} provider connection started.`);
+    setSetupNote(target, "Authorization started. Approve access in your browser.");
+    addMessage("assistant", `${target === "calendar" ? "Calendar" : "Email"} connection started. I’ll finish setup when approval completes.`);
+    oauthPollTimers[target] = setInterval(() => pollProviderConnectStatus(target), 1500);
+    pollProviderConnectStatus(target);
   } catch (err) {
     setSetupNote(target, "Couldn't start provider connection.");
   }

@@ -4,11 +4,12 @@ import os
 import socket
 import subprocess
 import time
+import uuid
 from collections import deque
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from pathlib import Path
 import re
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 DEFAULT_SOCKET = "/run/ai-distro/agent.sock"
 DEFAULT_STATIC = "/usr/share/ai-distro/ui/shell"
@@ -38,6 +39,8 @@ def agent_request(payload: dict, timeout=4.0):
 
 
 class ShellHandler(SimpleHTTPRequestHandler):
+    OAUTH_SESSIONS = {}
+
     def _load_json(self, path):
         try:
             with open(path, "r", encoding="utf-8") as fh:
@@ -62,6 +65,11 @@ class ShellHandler(SimpleHTTPRequestHandler):
         if repo_tool.exists():
             return str(repo_tool)
         return str(packaged)
+
+    def _server_base_url(self):
+        host = os.environ.get("AI_DISTRO_SHELL_HOST", "127.0.0.1")
+        port = int(os.environ.get("AI_DISTRO_SHELL_PORT", "17842"))
+        return f"http://{host}:{port}"
 
     def _load_persona(self):
         path = os.environ.get("AI_DISTRO_PERSONA", DEFAULT_PERSONA)
@@ -213,20 +221,48 @@ class ShellHandler(SimpleHTTPRequestHandler):
         env = os.environ.copy()
         client_id = str(payload.get("client_id", "")).strip()
         client_secret = str(payload.get("client_secret", "")).strip()
+        redirect_uri = str(payload.get("redirect_uri", "")).strip()
+        state = str(payload.get("state", "")).strip()
         if provider in ("google", "gmail"):
             if client_id:
                 env["AI_DISTRO_GOOGLE_CLIENT_ID"] = client_id
             if client_secret:
                 env["AI_DISTRO_GOOGLE_CLIENT_SECRET"] = client_secret
+            if redirect_uri:
+                env["AI_DISTRO_GOOGLE_REDIRECT_URI"] = redirect_uri
         if provider in ("microsoft", "outlook"):
             if client_id:
                 env["AI_DISTRO_MICROSOFT_CLIENT_ID"] = client_id
             if client_secret:
                 env["AI_DISTRO_MICROSOFT_CLIENT_SECRET"] = client_secret
+            if redirect_uri:
+                env["AI_DISTRO_MICROSOFT_REDIRECT_URI"] = redirect_uri
+        if state:
+            env["AI_DISTRO_OAUTH_STATE"] = state
         return env
 
     def _oauth_start(self, target, provider, payload):
-        env = self._provider_env(provider, payload)
+        state = uuid.uuid4().hex
+        callback_uri = f"{self._server_base_url()}/oauth/callback"
+        session = {
+            "target": target,
+            "provider": provider,
+            "client_id": str(payload.get("client_id", "")).strip(),
+            "client_secret": str(payload.get("client_secret", "")).strip(),
+            "state": state,
+            "redirect_uri": callback_uri,
+            "status": "pending",
+            "message": "",
+            "code": "",
+            "created_at": int(time.time()),
+            "updated_at": int(time.time()),
+            "auth_url": "",
+        }
+        self.OAUTH_SESSIONS[state] = session
+        run_payload = dict(payload)
+        run_payload["redirect_uri"] = callback_uri
+        run_payload["state"] = state
+        env = self._provider_env(provider, run_payload)
         if target == "calendar" and provider == "google":
             tool = self._agent_tool_path("google_calendar_oauth.py")
             proc = subprocess.run(
@@ -275,12 +311,19 @@ class ShellHandler(SimpleHTTPRequestHandler):
         out = (proc.stdout or "").strip()
         err = (proc.stderr or "").strip()
         if proc.returncode != 0:
+            session["status"] = "error"
+            session["message"] = err or out or "OAuth start failed."
+            session["updated_at"] = int(time.time())
             return False, {"status": "error", "message": err or out or "OAuth start failed."}
         url = self._extract_url(out)
+        session["auth_url"] = url
+        session["message"] = "Open the authorization page and approve access."
+        session["updated_at"] = int(time.time())
         return True, {
             "status": "ok",
+            "state": state,
             "auth_url": url,
-            "message": "Authorization URL ready. After login, paste the code here and click Finish Connect.",
+            "message": "Authorization URL ready. Approve access and we’ll finish setup automatically.",
             "raw": out,
         }
 
@@ -340,6 +383,53 @@ class ShellHandler(SimpleHTTPRequestHandler):
             return False, {"status": "error", "message": err or out or "OAuth exchange failed."}
         return True, {"status": "ok", "message": out or "Provider connected."}
 
+    def _oauth_session_for(self, target):
+        target = str(target or "").strip().lower()
+        if target not in ("calendar", "email"):
+            return None
+        latest = None
+        for sess in self.OAUTH_SESSIONS.values():
+            if sess.get("target") != target:
+                continue
+            if latest is None or int(sess.get("updated_at", 0)) > int(latest.get("updated_at", 0)):
+                latest = sess
+        return latest
+
+    def _oauth_handle_callback(self, parsed):
+        qs = parse_qs(parsed.query or "")
+        state = (qs.get("state") or [""])[0].strip()
+        code = (qs.get("code") or [""])[0].strip()
+        error = (qs.get("error") or [""])[0].strip()
+        sess = self.OAUTH_SESSIONS.get(state) if state else None
+
+        if not sess:
+            return False, "Connection session was not found or expired."
+        if error:
+            sess["status"] = "error"
+            sess["message"] = f"Authorization failed: {error}"
+            sess["updated_at"] = int(time.time())
+            return False, sess["message"]
+        if not code:
+            sess["status"] = "error"
+            sess["message"] = "Authorization did not return a valid code."
+            sess["updated_at"] = int(time.time())
+            return False, sess["message"]
+
+        sess["code"] = code
+        finish_payload = {
+            "target": sess.get("target"),
+            "provider": sess.get("provider"),
+            "client_id": sess.get("client_id", ""),
+            "client_secret": sess.get("client_secret", ""),
+            "redirect_uri": sess.get("redirect_uri", ""),
+            "code": code,
+        }
+        ok, body = self._oauth_finish(sess.get("target"), sess.get("provider"), finish_payload)
+        sess["status"] = "connected" if ok else "error"
+        sess["message"] = str(body.get("message", "Connected." if ok else "Connection failed."))
+        sess["updated_at"] = int(time.time())
+        return ok, sess["message"]
+
     def _provider_test(self, target, provider):
         env = os.environ.copy()
         if target == "calendar":
@@ -376,6 +466,22 @@ class ShellHandler(SimpleHTTPRequestHandler):
         return os.path.join(static_root, rel)
 
     def do_GET(self):
+        parsed = urlparse(self.path)
+        if parsed.path == "/oauth/callback":
+            ok, message = self._oauth_handle_callback(parsed)
+            self.send_response(200 if ok else 400)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            title = "Connected" if ok else "Connection Failed"
+            body = (
+                f"<h2>{title}</h2><p>{message}</p><p>You can close this tab and return to AI Distro Shell.</p>"
+            )
+            self.wfile.write(
+                f"<!doctype html><html><body style='font-family:sans-serif;padding:24px'>{body}</body></html>".encode(
+                    "utf-8"
+                )
+            )
+            return
         if self.path.startswith("/api/"):
             if self.path == "/api/health":
                 self.send_response(200)
@@ -417,6 +523,25 @@ class ShellHandler(SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 payload = {"status": "ok", "tasks": self._load_recent_task_events(limit=8)}
+                self.wfile.write(json.dumps(payload).encode("utf-8"))
+                return
+            if parsed.path == "/api/provider/connect/status":
+                target = (parse_qs(parsed.query or "").get("target") or [""])[0].strip().lower()
+                sess = self._oauth_session_for(target)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                if not sess:
+                    self.wfile.write(json.dumps({"status": "idle", "target": target}).encode("utf-8"))
+                    return
+                payload = {
+                    "status": str(sess.get("status", "pending")),
+                    "target": str(sess.get("target", "")),
+                    "provider": str(sess.get("provider", "")),
+                    "message": str(sess.get("message", "")),
+                    "auth_url": str(sess.get("auth_url", "")),
+                    "updated_at": int(sess.get("updated_at", 0)),
+                }
                 self.wfile.write(json.dumps(payload).encode("utf-8"))
                 return
             self.send_error(404, "unknown api")

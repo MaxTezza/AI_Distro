@@ -37,16 +37,18 @@ def cmd_auth_url():
     if not cfg:
         return 2
     scope = os.environ.get("AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE", DEFAULT_SCOPE).strip()
-    params = urllib.parse.urlencode(
-        {
-            "client_id": cfg["client_id"],
-            "response_type": "code",
-            "redirect_uri": cfg["redirect_uri"],
-            "response_mode": "query",
-            "scope": scope,
-            "prompt": "select_account",
-        }
-    )
+    query = {
+        "client_id": cfg["client_id"],
+        "response_type": "code",
+        "redirect_uri": cfg["redirect_uri"],
+        "response_mode": "query",
+        "scope": scope,
+        "prompt": "select_account",
+    }
+    state = os.environ.get("AI_DISTRO_OAUTH_STATE", "").strip()
+    if state:
+        query["state"] = state
+    params = urllib.parse.urlencode(query)
     print("Open this URL, authorize, then run:")
     print("  microsoft_outlook_oauth.py exchange <code>")
     print()
@@ -121,4 +123,3 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
