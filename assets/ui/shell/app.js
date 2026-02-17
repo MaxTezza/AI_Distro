@@ -61,6 +61,7 @@ let fillerPhrases = [
   "Thanks for waiting.",
   "Making progress.",
 ];
+let progressPhrases = [];
 
 const applyPersona = (persona) => {
   if (!persona) return;
@@ -316,6 +317,34 @@ const speak = (text) => {
   window.speechSynthesis.speak(utter);
 };
 
+const summarizeRequest = (text) => {
+  const cleaned = (text || "").trim().replace(/\s+/g, " ");
+  if (!cleaned) return "that";
+  if (cleaned.length <= 64) return cleaned.toLowerCase();
+  return `${cleaned.slice(0, 61).toLowerCase()}...`;
+};
+
+const conversationalAck = (text) => {
+  const summary = summarizeRequest(text);
+  if (summary === "that") {
+    return "I heard you. I’m on it.";
+  }
+  return `I heard you ask to ${summary}. I’m on it now.`;
+};
+
+const buildProgressPhrases = (text) => {
+  const summary = summarizeRequest(text);
+  if (summary === "that") {
+    return [...fillerPhrases];
+  }
+  return [
+    `I’m working on ${summary}.`,
+    `Still working on ${summary}.`,
+    `Almost done with ${summary}.`,
+    ...fillerPhrases,
+  ];
+};
+
 const setStatus = (online, text) => {
   statusDot.classList.toggle("online", online);
   statusText.textContent = text;
@@ -335,14 +364,15 @@ const stopFiller = () => {
 
 const startFiller = () => {
   stopFiller();
+  const lines = progressPhrases.length ? progressPhrases : fillerPhrases;
   // Wait a moment before speaking to avoid noise on fast responses.
   fillerTimer = setTimeout(() => {
-    addMessage("assistant", fillerPhrases[fillerIndex % fillerPhrases.length]);
-    speak(fillerPhrases[fillerIndex % fillerPhrases.length]);
+    addMessage("assistant", lines[fillerIndex % lines.length]);
+    speak(lines[fillerIndex % lines.length]);
     fillerIndex += 1;
     fillerInterval = setInterval(() => {
-      addMessage("assistant", fillerPhrases[fillerIndex % fillerPhrases.length]);
-      speak(fillerPhrases[fillerIndex % fillerPhrases.length]);
+      addMessage("assistant", lines[fillerIndex % lines.length]);
+      speak(lines[fillerIndex % lines.length]);
       fillerIndex += 1;
     }, 9000);
   }, 2000);
@@ -548,7 +578,11 @@ const maybeStartOnboarding = async () => {
 const sendCommand = async (text) => {
   if (!text) return;
   addMessage("user", text);
+  const ack = conversationalAck(text);
+  addMessage("assistant", ack);
+  speak(ack);
   commandInput.value = "";
+  progressPhrases = buildProgressPhrases(text);
   setStatus(true, "Thinking...");
   startFiller();
   try {
