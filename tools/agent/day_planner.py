@@ -324,21 +324,54 @@ def fetch_weather(day: dt.date):
 def clothing_rules(forecast, events):
     import random
     
+    advice = []
+
     # Analyze Weather
-    tmin = forecast["temp_min"]
-    tmax = forecast["temp_max"]
-    rain = forecast["rain_chance"]
-    location = forecast["location"]
-    
-    is_hot = tmax >= 30
-    is_warm = 20 <= tmax < 30
-    is_mild = 15 <= tmax < 20
-    is_chilly = 10 <= tmax < 15
-    is_cold = tmax < 10
-    
-    rainy = rain >= 40
-    slight_rain = 20 <= rain < 40
-    dry = rain < 20
+    if forecast:
+        tmin = forecast["temp_min"]
+        tmax = forecast["temp_max"]
+        rain = forecast["rain_chance"]
+        location = forecast["location"]
+        
+        is_hot = tmax >= 30
+        is_warm = 20 <= tmax < 30
+        is_mild = 15 <= tmax < 20
+        is_chilly = 10 <= tmax < 15
+        is_cold = tmax < 10
+        
+        rainy = rain >= 40
+        slight_rain = 20 <= rain < 40
+        dry = rain < 20
+        
+        # Base Layer Recommendation
+        if is_hot:
+            advice.append(random.choice([
+                "It's gonna be a scorcher, so definitely stick to light, breathable fabrics.",
+                "It's hot out there—shorts and a t-shirt are the way to go.",
+                "Stay cool with something light today."
+            ]))
+        elif is_warm:
+            if rainy or slight_rain:
+                advice.append("It's warm but wet, so maybe a t-shirt and jeans.")
+            else:
+                advice.append("It's beautiful out! Perfect weather for a t-shirt or a light dress.")
+        elif is_mild:
+            advice.append("It's mild, so layers are your friend. Maybe a long-sleeve tee or a light sweater.")
+        elif is_chilly:
+            advice.append("It's getting chilly. You'll want a sweater or a hoodie.")
+        elif is_cold:
+            advice.append("It's freezing! Definitely time for the heavy coat and scarf.")
+
+        # Contextual Add-ons
+        if rainy:
+            advice.append("Don't forget your umbrella, it's really coming down later.")
+        elif slight_rain:
+            if is_warm:
+                advice.append("There's a chance of rain, so maybe toss a raincoat in the car just in case.")
+            else:
+                advice.append("Might sprinkle a bit, so keep a jacket handy.")
+    else:
+        advice.append("I couldn't check the weather, so take a look outside before you dress.")
     
     # Analyze Calendar
     dress_codes = {e.get("dress_code", "casual") for e in events}

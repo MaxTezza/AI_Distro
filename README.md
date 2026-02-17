@@ -3,15 +3,11 @@
 Voice-first, agentic Linux distro workbench focused on useful day-to-day automation with strict safety controls.
 
 ## Current Status
-- Bootable ISO pipeline exists.
 - **Local LLM Brain:** Llama 3.2 1B running locally for natural language understanding (Zero API keys).
-- **Nervous System (Event Bus):** Deep D-Bus integration for proactive alerts (Low battery, Network changes).
-- **Conversational UI:** Modern shell with "thinking" states and proactive messaging.
-- **Asynchronous IPC (Tokio):** Core agent refactored for non-blocking concurrent requests.
-- **Secure Audit Logging:** SHA-256 hash chains for tamper-evident record keeping.
-- **Modularized Core:** Decoupled handlers (package, system, media, etc.) for better maintainability.
-- **Automated Quality Gate:** GitHub Actions CI for build, test, and linting.
-- **Containerized Deployment:** Docker support for easy environment isolation.
+- **Direct Voice Command:** "Computer" wake word triggers immediate actions (no conversational filler).
+- **Day Planner:** Integrated tool that combines weather + calendar for outfit advice.
+- **Cryptographic Audit:** SHA-256 hash-chain logging for all actions.
+- **ISO State:** Source code and packages are built. Run `make rootfs` and `make iso-assemble` to finish.
 
 ### Docker (Headless Agent)
 You can run the AI Distro agent in a container for testing or headless server usage.
