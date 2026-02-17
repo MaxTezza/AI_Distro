@@ -61,6 +61,18 @@
 - `AI_DISTRO_MICROSOFT_OUTLOOK_SCOPE`
   OAuth scopes for Outlook integration (default includes `Mail.Read` + `offline_access`).
 
+- `AI_DISTRO_IMAP_HOST`, `AI_DISTRO_IMAP_PORT` (default: `993`)
+  IMAP server host/port for generic email provider mode.
+
+- `AI_DISTRO_IMAP_USERNAME`, `AI_DISTRO_IMAP_PASSWORD`
+  IMAP credentials (for many providers or Proton Bridge local credentials).
+
+- `AI_DISTRO_IMAP_FOLDER` (default: `INBOX`)
+  Mail folder used for summary/search in IMAP mode.
+
+- `AI_DISTRO_IMAP_TLS_MODE` (default: `ssl`)
+  IMAP transport mode: `ssl` (IMAP4_SSL) or `starttls` (IMAP + STARTTLS).
+
 - `AI_DISTRO_GOOGLE_CALENDAR_ID` (default: `primary`)
   Calendar ID used for Google Calendar event fetch.
 

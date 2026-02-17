@@ -59,7 +59,7 @@ Audit entries are hash-chained and survive rotation (`AI_DISTRO_AUDIT_ROTATE_BYT
 ## Plugin Providers
 Core actions stay stable while providers are swappable:
 - Calendar: `local`, `google` (microsoft planned)
-- Email: `gmail` (outlook planned)
+- Email: `gmail`, `outlook`, `imap`
 
 Set providers in shell settings or via env:
 - `AI_DISTRO_CALENDAR_PROVIDER`
@@ -106,6 +106,16 @@ Outlook (optional, read-only):
   - `python3 tools/agent/microsoft_outlook_oauth.py exchange "<code>"`
 - This writes `~/.config/ai-distro/microsoft-outlook-oauth.json`
 - Set email provider to `outlook` in shell settings.
+
+IMAP / Proton Bridge (optional, read-only):
+- Set email provider to `imap` in shell settings.
+- Configure:
+  - `AI_DISTRO_IMAP_HOST`
+  - `AI_DISTRO_IMAP_PORT` (usually `993`)
+  - `AI_DISTRO_IMAP_USERNAME`
+  - `AI_DISTRO_IMAP_PASSWORD`
+  - optional `AI_DISTRO_IMAP_FOLDER` (default `INBOX`)
+- For Proton Mail, point host/port/user/password to Proton Bridge local credentials.
 
 Example file:
 

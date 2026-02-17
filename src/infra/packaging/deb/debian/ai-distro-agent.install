@@ -11,6 +11,7 @@ build/deb-root/usr/lib/ai-distro/calendar_google_tool.py usr/lib/ai-distro/
 build/deb-root/usr/lib/ai-distro/calendar_router.py usr/lib/ai-distro/
 build/deb-root/usr/lib/ai-distro/gmail_tool.py usr/lib/ai-distro/
 build/deb-root/usr/lib/ai-distro/outlook_tool.py usr/lib/ai-distro/
+build/deb-root/usr/lib/ai-distro/email_imap_tool.py usr/lib/ai-distro/
 build/deb-root/usr/lib/ai-distro/email_router.py usr/lib/ai-distro/
 configs/agent.json etc/ai-distro/agent.json
 configs/persona.json etc/ai-distro/persona.json
