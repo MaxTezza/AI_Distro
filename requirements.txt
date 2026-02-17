@@ -1,4 +1,13 @@
-llama-cpp-python
+# Core Agent Dependencies
 requests
-serde
+numpy
+scipy
 tqdm
+llama-cpp-python
+dbus-python
+pygobject
+pyaudio
+SpeechRecognition
+pyttsx3
+psutil
+simpleaudio

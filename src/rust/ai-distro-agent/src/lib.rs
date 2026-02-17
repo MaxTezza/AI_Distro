@@ -109,6 +109,30 @@ pub fn handle_request(
     registry: &HashMap<&'static str, Handler>,
     request: ActionRequest,
 ) -> ActionResponse {
+    let response = handle_request_inner(policy, registry, request.clone());
+    
+    // Cryptographic Audit Log
+    let audit_log = std::env::var("AI_DISTRO_AUDIT_LOG").unwrap_or_else(|_| "/var/log/ai-distro/audit.json".to_string());
+    let audit_state = std::env::var("AI_DISTRO_AUDIT_STATE").unwrap_or_else(|_| "/var/lib/ai-distro/audit_state.json".to_string());
+    
+    let mut state = audit::load_audit_chain_state(&audit_state);
+    let event = serde_json::json!({
+        "ts": audit::now_epoch_secs(),
+        "action": request.name,
+        "status": response.status,
+        "payload": request.payload
+    });
+    let _ = audit::append_audit_record(&audit_log, &mut state, event);
+    audit::persist_audit_chain_state(&audit_state, &state);
+
+    response
+}
+
+fn handle_request_inner(
+    policy: &PolicyConfig,
+    registry: &HashMap<&'static str, Handler>,
+    request: ActionRequest,
+) -> ActionResponse {
     // 0. Handle natural language parsing
     if request.name == "natural_language" {
         if let Some(text) = request.payload.as_deref() {

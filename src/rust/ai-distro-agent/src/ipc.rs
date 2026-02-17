@@ -44,7 +44,19 @@ pub async fn run_ipc_socket(
                         let trimmed = line.trim();
                         if !trimmed.is_empty() {
                             let response = match serde_json::from_str::<ActionRequest>(trimmed) {
-                                Ok(req) => handle_request(&policy, &registry, req),
+                                Ok(req) => {
+                                    // Audit Log
+                                    let audit_path = "/var/log/ai-distro/audit.json";
+                                    let mut state = crate::audit::load_audit_chain_state("/var/lib/ai-distro/audit_state.json");
+                                    let _ = crate::audit::append_audit_record(
+                                        audit_path, 
+                                        &mut state, 
+                                        serde_json::to_value(&req).unwrap_or_default()
+                                    );
+                                    crate::audit::persist_audit_chain_state("/var/lib/ai-distro/audit_state.json", &state);
+
+                                    handle_request(&policy, &registry, req)
+                                },
                                 Err(err) => ActionResponse {
                                     version: 1,
                                     action: "unknown".to_string(),
