@@ -76,6 +76,9 @@ Say:
 - `summarize my email`
 - `search my email for invoice`
 - `draft email to alex@example.com about project update`
+- `install discord`
+- `uninstall vlc`
+- `update my apps`
 
 This uses weather forecast + local calendar events from:
 - `AI_DISTRO_CALENDAR_EVENTS_FILE` (default: `~/.config/ai-distro/calendar-events.json`)

@@ -7,6 +7,14 @@
     ],
     "payload": "package"
   },
+  "package_remove": {
+    "examples": [
+      "remove firefox",
+      "uninstall discord app",
+      "delete vlc"
+    ],
+    "payload": "package"
+  },
   "system_update": {
     "examples": [
       "update the system",

@@ -50,6 +50,7 @@ struct AuditChainState {
 fn action_registry() -> HashMap<&'static str, Handler> {
     let mut map: HashMap<&'static str, Handler> = HashMap::new();
     map.insert("package_install", handle_package_install as Handler);
+    map.insert("package_remove", handle_package_remove as Handler);
     map.insert("system_update", handle_system_update as Handler);
     map.insert("read_context", handle_read_context as Handler);
     map.insert("get_capabilities", handle_get_capabilities as Handler);
@@ -103,11 +104,7 @@ fn handle_package_install(req: &ActionRequest) -> ActionResponse {
     let Some(payload) = req.payload.as_deref() else {
         return error_response(&req.name, "missing package list");
     };
-    let packages: Vec<&str> = payload
-        .split(',')
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .collect();
+    let packages = parse_package_payload(payload);
     if packages.is_empty() {
         return error_response(&req.name, "empty package list");
     }
@@ -117,12 +114,46 @@ fn handle_package_install(req: &ActionRequest) -> ActionResponse {
     if packages.iter().any(|pkg| !is_valid_package_name(pkg)) {
         return error_response(&req.name, "invalid package name");
     }
+    let mut installed = Vec::new();
+    for pkg in &packages {
+        match install_package_with_best_source(pkg) {
+            Ok(msg) => installed.push(msg),
+            Err(err) => return error_response(&req.name, &err),
+        }
+    }
+    if installed.is_empty() {
+        ok_response(&req.name, "Packages installed.")
+    } else {
+        ok_response(&req.name, &format!("Installed: {}.", installed.join(", ")))
+    }
+}
 
-    let mut args = vec!["install", "-y"];
-    args.extend(packages.iter().copied());
-    match run_command("apt-get", &args, Some(&[("DEBIAN_FRONTEND", "noninteractive")])) {
-        Ok(_) => ok_response(&req.name, "Packages installed."),
-        Err(err) => error_response(&req.name, &err),
+fn handle_package_remove(req: &ActionRequest) -> ActionResponse {
+    log::info!("handler: package_remove, payload={:?}", req.payload);
+    let Some(payload) = req.payload.as_deref() else {
+        return error_response(&req.name, "missing package list");
+    };
+    let packages = parse_package_payload(payload);
+    if packages.is_empty() {
+        return error_response(&req.name, "empty package list");
+    }
+    if packages.len() > 20 {
+        return error_response(&req.name, "too many packages requested");
+    }
+    if packages.iter().any(|pkg| !is_valid_package_name(pkg)) {
+        return error_response(&req.name, "invalid package name");
+    }
+    let mut removed = Vec::new();
+    for pkg in &packages {
+        match remove_package_with_best_source(pkg) {
+            Ok(msg) => removed.push(msg),
+            Err(err) => return error_response(&req.name, &err),
+        }
+    }
+    if removed.is_empty() {
+        ok_response(&req.name, "Packages removed.")
+    } else {
+        ok_response(&req.name, &format!("Removed: {}.", removed.join(", ")))
     }
 }
 
@@ -132,9 +163,19 @@ fn handle_system_update(req: &ActionRequest) -> ActionResponse {
     if let Err(err) = run_command("apt-get", &["update"], env) {
         return error_response(&req.name, &err);
     }
-    match run_command("apt-get", &["upgrade", "-y"], env) {
-        Ok(_) => ok_response(&req.name, "System updated."),
-        Err(err) => error_response(&req.name, &err),
+    if let Err(err) = run_command("apt-get", &["upgrade", "-y"], env) {
+        return error_response(&req.name, &err);
+    }
+    if command_exists("flatpak") {
+        match run_command("flatpak", &["update", "-y"], None) {
+            Ok(_) => ok_response(&req.name, "System and Flatpak apps updated."),
+            Err(err) => ok_response(
+                &req.name,
+                &format!("System updated. Flatpak update skipped: {err}"),
+            ),
+        }
+    } else {
+        ok_response(&req.name, "System updated.")
     }
 }
 
@@ -159,6 +200,7 @@ fn handle_get_capabilities(req: &ActionRequest) -> ActionResponse {
             ipc_version: 1,
             actions: vec![
                 "package_install".to_string(),
+                "package_remove".to_string(),
                 "system_update".to_string(),
                 "read_context".to_string(),
                 "get_capabilities".to_string(),
@@ -606,6 +648,97 @@ fn is_valid_package_name(pkg: &str) -> bool {
     }
     pkg.chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '-' || c == '.' || c == ':')
+}
+
+fn parse_package_payload(payload: &str) -> Vec<&str> {
+    payload
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+fn is_valid_flatpak_app_id(app_id: &str) -> bool {
+    if app_id.is_empty() || app_id.len() > 160 || !app_id.contains('.') {
+        return false;
+    }
+    app_id
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-')
+}
+
+fn first_non_empty_line(out: &str) -> Option<&str> {
+    out.lines().map(|l| l.trim()).find(|l| !l.is_empty())
+}
+
+fn flatpak_search_remote_app(query: &str) -> Option<String> {
+    if !command_exists("flatpak") {
+        return None;
+    }
+    let out = run_command(
+        "flatpak",
+        &["search", "--app", "--columns=application", "-q", query],
+        None,
+    )
+    .ok()?;
+    let line = first_non_empty_line(&out)?;
+    if is_valid_flatpak_app_id(line) {
+        Some(line.to_string())
+    } else {
+        None
+    }
+}
+
+fn flatpak_find_installed_app(query: &str) -> Option<String> {
+    if !command_exists("flatpak") {
+        return None;
+    }
+    if is_valid_flatpak_app_id(query) {
+        return Some(query.to_string());
+    }
+    let out = run_command("flatpak", &["list", "--app", "--columns=application"], None).ok()?;
+    let needle = query.to_ascii_lowercase();
+    for line in out.lines() {
+        let app_id = line.trim();
+        if !is_valid_flatpak_app_id(app_id) {
+            continue;
+        }
+        let app_l = app_id.to_ascii_lowercase();
+        if app_l == needle {
+            return Some(app_id.to_string());
+        }
+        let tail = app_l.rsplit('.').next().unwrap_or("");
+        if tail == needle {
+            return Some(app_id.to_string());
+        }
+    }
+    None
+}
+
+fn install_package_with_best_source(pkg: &str) -> Result<String, String> {
+    if let Some(app_id) = flatpak_search_remote_app(pkg) {
+        run_command("flatpak", &["install", "-y", "flathub", &app_id], None)?;
+        return Ok(format!("{pkg} via flatpak ({app_id})"));
+    }
+    run_command(
+        "apt-get",
+        &["install", "-y", pkg],
+        Some(&[("DEBIAN_FRONTEND", "noninteractive")]),
+    )?;
+    Ok(format!("{pkg} via apt"))
+}
+
+fn remove_package_with_best_source(pkg: &str) -> Result<String, String> {
+    if let Some(app_id) = flatpak_find_installed_app(pkg) {
+        run_command("flatpak", &["uninstall", "-y", &app_id], None)?;
+        return Ok(format!("{pkg} via flatpak ({app_id})"));
+    }
+    run_command(
+        "apt-get",
+        &["remove", "-y", pkg],
+        Some(&[("DEBIAN_FRONTEND", "noninteractive")]),
+    )?;
+    Ok(format!("{pkg} via apt"))
 }
 
 fn is_valid_app_name(app: &str) -> bool {

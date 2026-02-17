@@ -25,6 +25,18 @@ def test_update():
     assert res["payload"] == "stable"
 
 
+def test_update_apps_natural():
+    res = run("update my apps")
+    assert res["intent"] == "system_update"
+    assert res["payload"] == "stable"
+
+
+def test_remove_app():
+    res = run("uninstall discord app")
+    assert res["intent"] == "package_remove"
+    assert res["payload"] == "discord"
+
+
 def test_volume():
     res = run("set volume to 40%")
     assert res["intent"] == "set_volume"
@@ -87,6 +99,8 @@ def test_email_draft():
 if __name__ == "__main__":
     test_install_multiple()
     test_update()
+    test_update_apps_natural()
+    test_remove_app()
     test_volume()
     test_open_url()
     test_open_app()

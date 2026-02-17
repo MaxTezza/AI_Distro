@@ -4,6 +4,7 @@
   "constraints": {
     "require_confirmation_for": [
       "package_install",
+      "package_remove",
       "system_update",
       "power_reboot",
       "power_shutdown",
@@ -43,6 +44,7 @@
     "rate_limit_per_minute_default": 120,
     "rate_limit_per_minute_overrides": {
       "package_install": 10,
+      "package_remove": 10,
       "system_update": 6,
       "power_reboot": 6,
       "power_shutdown": 6,

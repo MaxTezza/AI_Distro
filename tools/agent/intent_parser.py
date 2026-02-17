@@ -56,7 +56,19 @@ def parse_install(text):
         return None
     pkgs = match.group(1)
     pkgs = re.sub(r"\b(and|,|please)\b", " ", pkgs)
-    pkgs = ",".join([p for p in pkgs.split() if p])
+    skip = {"app", "apps", "application", "applications", "package", "packages", "the"}
+    pkgs = ",".join([p for p in pkgs.split() if p and p not in skip])
+    return pkgs if pkgs else None
+
+
+def parse_remove(text):
+    match = re.search(r"\b(?:remove|uninstall|delete)\b(.+)", text)
+    if not match:
+        return None
+    pkgs = match.group(1)
+    pkgs = re.sub(r"\b(and|,|please)\b", " ", pkgs)
+    skip = {"app", "apps", "application", "applications", "package", "packages", "the"}
+    pkgs = ",".join([p for p in pkgs.split() if p and p not in skip])
     return pkgs if pkgs else None
 
 
@@ -365,6 +377,11 @@ def main():
     brightness = parse_percent(text, "brightness")
     if brightness:
         print(json.dumps(to_action("set_brightness", brightness)))
+        return
+
+    remove = parse_remove(text)
+    if remove:
+        print(json.dumps(to_action("package_remove", remove)))
         return
 
     if "update" in text or "upgrade" in text:

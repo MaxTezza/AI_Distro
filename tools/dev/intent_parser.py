@@ -87,6 +87,10 @@ def parse_intent(text: str, mapping: dict):
         payload = extract_payload("package_install", text_n)
         return "package_install", payload
 
+    if text_n.startswith("remove ") or text_n.startswith("uninstall ") or text_n.startswith("delete "):
+        payload = extract_payload("package_remove", text_n)
+        return "package_remove", payload
+
     if "update" in text_n or "upgrade" in text_n:
         return "system_update", "stable"
 
@@ -169,7 +173,18 @@ def extract_payload(intent: str, text_n: str):
         # support "vim and curl", "vim, curl", "vim curl"
         raw = raw.replace(",", " ")
         raw = raw.replace(" and ", " ")
-        pkgs = [p for p in raw.split(" ") if p]
+        skip = {"app", "apps", "application", "applications", "package", "packages", "the"}
+        pkgs = [p for p in raw.split(" ") if p and p not in skip]
+        return ",".join(pkgs) if pkgs else None
+    if intent == "package_remove":
+        parts = text_n.split(" ", 1)
+        if len(parts) < 2:
+            return None
+        raw = parts[1]
+        raw = raw.replace(",", " ")
+        raw = raw.replace(" and ", " ")
+        skip = {"app", "apps", "application", "applications", "package", "packages", "the"}
+        pkgs = [p for p in raw.split(" ") if p and p not in skip]
         return ",".join(pkgs) if pkgs else None
     if intent in ("set_volume", "set_brightness"):
         m = re.search(r"(\d+)", text_n)
