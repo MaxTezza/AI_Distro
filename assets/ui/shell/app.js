@@ -8,6 +8,8 @@ const micButton = document.getElementById("mic-button");
 const voiceToggle = document.getElementById("voice-toggle");
 const personaButtons = Array.from(document.querySelectorAll(".persona-button"));
 const onboardingRestart = document.getElementById("onboarding-restart");
+const providerCalendar = document.getElementById("provider-calendar");
+const providerEmail = document.getElementById("provider-email");
 const onboarding = document.getElementById("onboarding");
 const onboardingTitle = document.getElementById("onboarding-title");
 const onboardingStepLabel = document.getElementById("onboarding-step-label");
@@ -30,6 +32,11 @@ let activePersona = "max";
 let onboardingStep = 0;
 let onboardingCompleted = false;
 let onboardingStartedAt = null;
+let providers = {
+  calendar: "local",
+  email: "gmail",
+  weather: "default",
+};
 
 let fillerPhrases = [
   "Working on it.",
@@ -88,6 +95,46 @@ const refreshPersona = async () => {
     if (!res.ok) return;
     const payload = await res.json();
     applyPersona(payload.persona);
+  } catch (err) {
+    // ignore
+  }
+};
+
+const applyProvidersUI = () => {
+  if (providerCalendar) providerCalendar.value = providers.calendar || "local";
+  if (providerEmail) providerEmail.value = providers.email || "gmail";
+};
+
+const persistProviders = async () => {
+  try {
+    const res = await fetch(`${apiBase}/api/providers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ providers }),
+    });
+    if (!res.ok) {
+      addMessage("assistant", "Couldn't save provider settings.");
+      return false;
+    }
+    return true;
+  } catch (err) {
+    addMessage("assistant", "Couldn't save provider settings.");
+    return false;
+  }
+};
+
+const loadProviders = async () => {
+  try {
+    const res = await fetch(`${apiBase}/api/providers`);
+    if (!res.ok) return;
+    const payload = await res.json();
+    if (payload.providers) {
+      providers = {
+        ...providers,
+        ...payload.providers,
+      };
+      applyProvidersUI();
+    }
   } catch (err) {
     // ignore
   }
@@ -509,6 +556,26 @@ onboardingRestart.addEventListener("click", async () => {
   addMessage("assistant", "Onboarding restarted.");
 });
 
+if (providerCalendar) {
+  providerCalendar.addEventListener("change", async () => {
+    providers.calendar = providerCalendar.value;
+    const ok = await persistProviders();
+    if (ok) {
+      addMessage("assistant", `Calendar provider set to ${providers.calendar}.`);
+    }
+  });
+}
+
+if (providerEmail) {
+  providerEmail.addEventListener("change", async () => {
+    providers.email = providerEmail.value;
+    const ok = await persistProviders();
+    if (ok) {
+      addMessage("assistant", `Email provider set to ${providers.email}.`);
+    }
+  });
+}
+
 const ping = async () => {
   try {
     const res = await fetch(`${apiBase}/api/health`);
@@ -557,3 +624,4 @@ personaButtons.forEach((btn) => {
 
 loadPersonaPresets();
 maybeStartOnboarding();
+loadProviders();

@@ -22,8 +22,20 @@
 - `AI_DISTRO_CALENDAR_TOOL` (default: `/usr/lib/ai-distro/calendar_tool.py`)
   Helper script for local calendar add/list requests (`calendar_add_event`, `calendar_list_day`).
 
+- `AI_DISTRO_CALENDAR_ROUTER` (default: `/usr/lib/ai-distro/calendar_router.py`)
+  Provider router for calendar actions (`local`, `google`, later `microsoft`).
+
 - `AI_DISTRO_GMAIL_TOOL` (default: `/usr/lib/ai-distro/gmail_tool.py`)
   Helper script for Gmail actions (`email_inbox_summary`, `email_search`, `email_draft`).
+
+- `AI_DISTRO_EMAIL_ROUTER` (default: `/usr/lib/ai-distro/email_router.py`)
+  Provider router for email actions (`gmail`, later `outlook`).
+
+- `AI_DISTRO_PROVIDERS_FILE` (default: `~/.config/ai-distro/providers.json`)
+  Provider selection file used by routers and shell UI.
+
+- `AI_DISTRO_CALENDAR_PROVIDER`, `AI_DISTRO_EMAIL_PROVIDER`, `AI_DISTRO_WEATHER_PROVIDER`
+  Optional provider overrides for routing without editing provider config files.
 
 - `AI_DISTRO_GOOGLE_CALENDAR_OAUTH_FILE` (default: `~/.config/ai-distro/google-calendar-oauth.json`)
   OAuth config for Google Calendar integration (`client_id`, `client_secret`, `refresh_token`, `calendar_id`).

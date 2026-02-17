@@ -390,8 +390,8 @@ fn handle_calendar_add_event(req: &ActionRequest) -> ActionResponse {
     let Some(payload) = req.payload.as_deref() else {
         return error_response(&req.name, "missing calendar payload");
     };
-    let tool = std::env::var("AI_DISTRO_CALENDAR_TOOL")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/calendar_tool.py".to_string());
+    let tool = std::env::var("AI_DISTRO_CALENDAR_ROUTER")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/calendar_router.py".to_string());
     match Command::new("python3")
         .arg(tool)
         .arg("add")
@@ -415,8 +415,8 @@ fn handle_calendar_add_event(req: &ActionRequest) -> ActionResponse {
 
 fn handle_calendar_list_day(req: &ActionRequest) -> ActionResponse {
     let payload = req.payload.as_deref().unwrap_or("today");
-    let tool = std::env::var("AI_DISTRO_CALENDAR_TOOL")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/calendar_tool.py".to_string());
+    let tool = std::env::var("AI_DISTRO_CALENDAR_ROUTER")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/calendar_router.py".to_string());
     match Command::new("python3")
         .arg(tool)
         .arg("list")
@@ -447,8 +447,8 @@ fn handle_calendar_list_day(req: &ActionRequest) -> ActionResponse {
 
 fn handle_email_inbox_summary(req: &ActionRequest) -> ActionResponse {
     let payload = req.payload.as_deref().unwrap_or("in:inbox newer_than:2d");
-    let tool = std::env::var("AI_DISTRO_GMAIL_TOOL")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/gmail_tool.py".to_string());
+    let tool = std::env::var("AI_DISTRO_EMAIL_ROUTER")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/email_router.py".to_string());
     match Command::new("python3")
         .arg(tool)
         .arg("summary")
@@ -479,8 +479,8 @@ fn handle_email_inbox_summary(req: &ActionRequest) -> ActionResponse {
 
 fn handle_email_search(req: &ActionRequest) -> ActionResponse {
     let payload = req.payload.as_deref().unwrap_or("in:inbox");
-    let tool = std::env::var("AI_DISTRO_GMAIL_TOOL")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/gmail_tool.py".to_string());
+    let tool = std::env::var("AI_DISTRO_EMAIL_ROUTER")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/email_router.py".to_string());
     match Command::new("python3")
         .arg(tool)
         .arg("search")
@@ -513,8 +513,8 @@ fn handle_email_draft(req: &ActionRequest) -> ActionResponse {
     let Some(payload) = req.payload.as_deref() else {
         return error_response(&req.name, "missing draft payload");
     };
-    let tool = std::env::var("AI_DISTRO_GMAIL_TOOL")
-        .unwrap_or_else(|_| "/usr/lib/ai-distro/gmail_tool.py".to_string());
+    let tool = std::env::var("AI_DISTRO_EMAIL_ROUTER")
+        .unwrap_or_else(|_| "/usr/lib/ai-distro/email_router.py".to_string());
     match Command::new("python3")
         .arg(tool)
         .arg("draft")

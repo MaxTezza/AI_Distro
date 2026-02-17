@@ -11,6 +11,7 @@ DEFAULT_STATIC = "/usr/share/ai-distro/ui/shell"
 DEFAULT_PERSONA = "/etc/ai-distro/persona.json"
 DEFAULT_PERSONA_ALFRED = "/etc/ai-distro/persona.alfred.json"
 DEFAULT_ONBOARDING = os.path.expanduser("~/.config/ai-distro/shell-onboarding.json")
+DEFAULT_PROVIDERS = os.path.expanduser("~/.config/ai-distro/providers.json")
 
 
 def agent_request(payload: dict, timeout=4.0):
@@ -109,6 +110,42 @@ class ShellHandler(SimpleHTTPRequestHandler):
         except Exception as exc:
             return False, str(exc)
 
+    def _providers_path(self):
+        return os.environ.get("AI_DISTRO_PROVIDERS_FILE", DEFAULT_PROVIDERS)
+
+    def _default_providers(self):
+        return {"calendar": "local", "email": "gmail", "weather": "default"}
+
+    def _load_providers(self):
+        path = self._providers_path()
+        providers = self._default_providers()
+        if not os.path.exists(path):
+            return providers
+        payload = self._load_json(path)
+        if isinstance(payload, dict):
+            for key in ("calendar", "email", "weather"):
+                val = payload.get(key)
+                if isinstance(val, str) and val.strip():
+                    providers[key] = val.strip().lower()
+        return providers
+
+    def _write_providers(self, providers):
+        path = self._providers_path()
+        data = self._default_providers()
+        if isinstance(providers, dict):
+            for key in ("calendar", "email", "weather"):
+                val = providers.get(key)
+                if isinstance(val, str) and val.strip():
+                    data[key] = val.strip().lower()
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump(data, fh, indent=2)
+                fh.write("\n")
+            return True, path
+        except Exception as exc:
+            return False, str(exc)
+
     def translate_path(self, path):
         static_root = os.environ.get("AI_DISTRO_SHELL_STATIC_DIR", DEFAULT_STATIC)
         rel = path.lstrip("/")
@@ -144,6 +181,13 @@ class ShellHandler(SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 payload = {"status": "ok", "state": self._load_onboarding()}
+                self.wfile.write(json.dumps(payload).encode("utf-8"))
+                return
+            if self.path == "/api/providers":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                payload = {"status": "ok", "providers": self._load_providers()}
                 self.wfile.write(json.dumps(payload).encode("utf-8"))
                 return
             self.send_error(404, "unknown api")
@@ -199,6 +243,32 @@ class ShellHandler(SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             msg = {"status": "ok", "path": detail}
+            self.wfile.write(json.dumps(msg).encode("utf-8"))
+            return
+        if parsed.path == "/api/providers":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw = self.rfile.read(content_length)
+            try:
+                payload = json.loads(raw.decode("utf-8"))
+            except json.JSONDecodeError:
+                self.send_error(400, "invalid json")
+                return
+            providers = payload.get("providers")
+            if not isinstance(providers, dict):
+                self.send_error(400, "providers must be object")
+                return
+            ok, detail = self._write_providers(providers)
+            if not ok:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                msg = {"status": "error", "message": f"could not persist providers: {detail}"}
+                self.wfile.write(json.dumps(msg).encode("utf-8"))
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            msg = {"status": "ok", "path": detail, "providers": self._load_providers()}
             self.wfile.write(json.dumps(msg).encode("utf-8"))
             return
         if parsed.path != "/api/command":

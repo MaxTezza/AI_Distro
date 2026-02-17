@@ -29,6 +29,7 @@ Then open `http://127.0.0.1:17842/` in a browser.
 Notes:
 - On first run, the onboarding wizard walks through voice replies, persona, safety, and a first command.
 - Onboarding progress is persisted at `~/.config/ai-distro/shell-onboarding.json`.
+- Provider choices are persisted at `~/.config/ai-distro/providers.json` and can be changed from shell settings.
 - If `ai-distro-agent` is not running, shell status will show offline/agent unavailable.
 
 ## Product Guardrails
@@ -54,6 +55,16 @@ Increase utility by extending these allowlists, instead of allowing arbitrary co
 
 Agent outcomes are also written to a JSONL audit trail (`AI_DISTRO_AUDIT_LOG`) for incident review and tuning.
 Audit entries are hash-chained and survive rotation (`AI_DISTRO_AUDIT_ROTATE_BYTES`) with continuity anchors.
+
+## Plugin Providers
+Core actions stay stable while providers are swappable:
+- Calendar: `local`, `google` (microsoft planned)
+- Email: `gmail` (outlook planned)
+
+Set providers in shell settings or via env:
+- `AI_DISTRO_CALENDAR_PROVIDER`
+- `AI_DISTRO_EMAIL_PROVIDER`
+- `AI_DISTRO_WEATHER_PROVIDER`
 
 ## Weather + Calendar Outfit Recommendation (v1)
 Say:

@@ -6,6 +6,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from provider_config import load_providers
 
 
 def target_date(payload: str) -> dt.date:
@@ -258,7 +259,10 @@ def main():
     if len(sys.argv) > 1:
         payload = " ".join(sys.argv[1:])
     day = target_date(payload)
-    events = load_google_calendar_events(day)
+    provider = load_providers().get("calendar", "local")
+    events = None
+    if provider == "google":
+        events = load_google_calendar_events(day)
     if events is None:
         events = load_calendar_events(day)
     forecast = fetch_weather(day)

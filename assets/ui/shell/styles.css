@@ -179,6 +179,14 @@ body {
   color: var(--accent-2);
 }
 
+.provider-select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
 .persona-button.active {
   background: rgba(255, 184, 107, 0.16);
   border-color: rgba(255, 184, 107, 0.6);
