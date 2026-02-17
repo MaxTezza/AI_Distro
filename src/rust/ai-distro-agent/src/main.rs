@@ -122,9 +122,12 @@ fn handle_package_install(req: &ActionRequest) -> ActionResponse {
         }
     }
     if installed.is_empty() {
-        ok_response(&req.name, "Packages installed.")
+        ok_response(&req.name, "I installed what you asked for.")
     } else {
-        ok_response(&req.name, &format!("Installed: {}.", installed.join(", ")))
+        ok_response(
+            &req.name,
+            &format!("I installed this for you: {}. You're all set.", installed.join(", ")),
+        )
     }
 }
 
@@ -151,9 +154,12 @@ fn handle_package_remove(req: &ActionRequest) -> ActionResponse {
         }
     }
     if removed.is_empty() {
-        ok_response(&req.name, "Packages removed.")
+        ok_response(&req.name, "I removed what you asked for.")
     } else {
-        ok_response(&req.name, &format!("Removed: {}.", removed.join(", ")))
+        ok_response(
+            &req.name,
+            &format!("I removed this for you: {}. Done.", removed.join(", ")),
+        )
     }
 }
 
@@ -168,14 +174,14 @@ fn handle_system_update(req: &ActionRequest) -> ActionResponse {
     }
     if command_exists("flatpak") {
         match run_command("flatpak", &["update", "-y"], None) {
-            Ok(_) => ok_response(&req.name, "System and Flatpak apps updated."),
+            Ok(_) => ok_response(&req.name, "I finished updating your system and Flatpak apps."),
             Err(err) => ok_response(
                 &req.name,
-                &format!("System updated. Flatpak update skipped: {err}"),
+                &format!("I finished updating your system. Flatpak apps could not be updated: {err}"),
             ),
         }
     } else {
-        ok_response(&req.name, "System updated.")
+        ok_response(&req.name, "I finished updating your system.")
     }
 }
 
